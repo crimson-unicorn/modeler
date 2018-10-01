@@ -149,10 +149,11 @@ class Model():
 			if len(cluster_dists) == 0:	# This cluster has only one member.
 				self.mean_thresholds[cluster_idx] = 0.0
 				self.max_thresholds[cluster_idx] = 0.0
+				self.stds[cluster_idx] = 0.0
 			else:
 				self.mean_thresholds[cluster_idx] = np.mean(cluster_dists)
 				self.max_thresholds[cluster_idx] = np.max(cluster_dists)
-			self.stds[cluster_idx] = np.std(cluster_dists)
+				self.stds[cluster_idx] = np.std(cluster_dists)
 				
 		# The last step is to compute the evolution of the graph based on its members and the cluster index to which they belong.
 		prev = -1 	# Check what cluster index a previous sketch is in.
