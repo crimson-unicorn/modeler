@@ -205,7 +205,7 @@ def test_single_graph(arr, models, metric, num_stds):
 	# As long as the test graph could fit into one of the models, we will set the @abnormal flag to False.
 	# If it could not fit into any of the models, the @abnormal flag remains True and we will signal the user.
 	# We also record at which stage (the index of the arr in @arr) the graph cannot be fitted into any of the @models.
-	for model in models:
+	for model_id, model in enumerate(models):
 		check_next_model = False	# Flag signalling whether we should proceed to check with the next model because the current one does not fit.
 		if not model.get_evolution():	# If the evolution is empty
 			check_next_model = True
