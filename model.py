@@ -38,8 +38,8 @@ def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, nu
 			model.construct_model(sketches, dists, best_cluster_group)
 						
 			print "Model " + str(model_num) + " is done!"
-			model.print_mean_thresholds()
-			model.print_evolution()
+			# model.print_mean_thresholds()
+			# model.print_evolution()
 			
 			models.append(model)
 		# We are done with this training file. Close the file and proceed to the next file.
@@ -56,7 +56,7 @@ def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds)
 	for input_test_file in test_files:
 		with open(os.path.join(test_dir_name, input_test_file), 'r') as f:
 			sketches = load_sketch(f)
-			abnormal, abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds)
+			abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds)
 		f.close()
 		total_graphs = total_graphs + 1
 		if not abnormal:	# We have decided that the graph is not abnormal
@@ -64,7 +64,7 @@ def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds)
 			if "attack" not in input_test_file:
 				predict_correct = predict_correct + 1
 		else:
-			printout += "This graph: " + input_test_file + " is considered ABNORMAL. " + str(abnormal_point) + "\n"
+			printout += "This graph: " + input_test_file + " is considered ABNORMAL at " + str(max_abnormal_point) + "\n"
 			if "attack" in input_test_file:
 				predict_correct = predict_correct + 1
 	accuracy = predict_correct / total_graphs
