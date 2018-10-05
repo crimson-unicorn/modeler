@@ -245,7 +245,11 @@ def test_single_graph(arr, models, metric, num_stds):
 			# break
 			# However, we would like to see how many models our test graph could fit, so we will test all the models.
 			num_fitted_model = num_fitted_model + 1
-	return abnormal, max(abnormal_point), num_fitted_model
+	if abnormal:
+		max_abnormal_point = max(abnormal_point)
+	else:
+		max_abnormal_point = None
+	return abnormal, max_abnormal_point, num_fitted_model
 
 
 
