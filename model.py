@@ -63,6 +63,7 @@ def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds)
 			abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds)
 		f.close()
 		total_graphs = total_graphs + 1
+
 		if not abnormal:	# We have decided that the graph is not abnormal
 			printout += "This graph: " + input_test_file + " is considered NORMAL (" + str(num_fitted_model) + "/" + str(len(models)) + ").\n"
 			if "attack" not in input_test_file:
@@ -75,11 +76,20 @@ def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds)
 				tp = tp + 1
 			else:
 				fp = fp + 1
-	precision = tp / (tp + fp)
+	if (tp + fp) == 0:
+		precision = None
+	else:
+		precision = tp / (tp + fp)
+	if (tp + fn) == 0:
+		print "[ERROR] No attack cases provided. This should not have happened. Check dataset."
+		sys.exit(1)
 	recall = tp / (tp + fn)
 	accuracy = (tp + tn) / (tp + tn + fp + fn)
-	f_measure = 2 * (precision * recall) / (precision + recall)
-	return precision, recall, accuracy, f_measure, printout
+	if precision == None:
+		f_measure = None
+	else:
+		f_measure = 2 * (precision * recall) / (precision + recall)
+	return tp, fp, tn, fn, precision, recall, accuracy, f_measure, printout
 
 if __name__ == "__main__":
 
@@ -132,8 +142,8 @@ if __name__ == "__main__":
 	for tm in threshold_metric_config:
 		for ns in num_stds_config:
 			# Validation/Testing
-			test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(test_files, test_dir_name, models, tm, ns)
-			stats.write(tm + ',' + str(ns) + ',' + str(test_precision) + ',' + str(test_recall) + ',' + str(test_accuracy) + ',' + str(test_f_measure) + '\n')
+			test_tp, test_fp, test_tn, test_fn, test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(test_files, test_dir_name, models, tm, ns)
+			stats.write(tm + ',' + str(ns) + ',' + str(test_tp) + ',' + str(test_fp) + ',' + str(test_tn) + ',' + str(test_fn) + ',' + str(test_precision) + ',' + str(test_recall) + ',' + str(test_accuracy) + ',' + str(test_f_measure) + '\n')
 
 
 
