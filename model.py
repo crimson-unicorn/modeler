@@ -127,52 +127,13 @@ if __name__ == "__main__":
 	# Modeling (training)
 	models = model_all_training_graphs(train_files, train_dir_name)
 
-	print "We will attempt multiple cluster threshold configurations for the best results."
-	print "Trying: mean/max distances with 1.0, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0 standard deviation(s)..."
-	print "Best Configuration: "
-        best_accuracy = 0.0
-        final_printout = ""
-        final_precision = None
-        final_recall = None
-        final_f = None
-        best_metric = None
-        best_std = 0.0
+	# To save stats data
+	stats = open("stats.csv", "a+")
 	for tm in threshold_metric_config:
 		for ns in num_stds_config:
 			# Validation/Testing
 			test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(test_files, test_dir_name, models, tm, ns)
-			if test_accuracy > best_accuracy:
-				best_accuracy = test_accuracy
-				final_precision = test_precision
-				final_recall = test_recall
-				final_f = test_f_measure
-				final_printout = printout
-				best_metric = tm
-				best_std = ns
-			elif test_accuracy == best_accuracy:
-				if best_metric == 'max' and tm == 'mean':	# same accuracy, prefer mean than max
-					best_metric = tm
-					best_std = ns
-					final_precision = test_precision
-					final_recall = test_recall
-					final_f = test_f_measure
-					final_printout = printout
-				elif best_metric == tm:				# same accuracy and same metric, prefer lower number of std
-					if ns < best_std:
-						best_std = ns
-						final_precision = test_precision
-						final_recall = test_recall
-						final_f = test_f_measure
-						final_printout = printout
-
-	print "Threshold metric: " + best_metric
-	print "Number of standard deviations: " + str(best_std)
-	print "Test accuracy: " + str(best_accuracy)
-	print "Test Precision: " + str(final_precision)
-	print "Test Recall: " + str(final_recall)
-	print "Test F-1 Score: " + str(final_f)
-	print "Results: "
-	print final_printout
+			stats.write(tm + ',' + str(ns) + ',' + str(test_precision) + ',' + str(test_recall) + ',' + str(test_accuracy) + ',' + str(test_f_measure) + '\n')
 
 
 
