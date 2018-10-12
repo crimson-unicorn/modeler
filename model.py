@@ -51,7 +51,11 @@ def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, nu
 def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds):
 	# Validation/Testing code starts here.
 	total_graphs = 0.0
-	predict_correct = 0.0
+	tp = 0.0	# true positive (intrusion and alarmed)
+	tn = 0.0	# true negative (not intrusion and not alarmed)
+	fp = 0.0	# false positive (not intrusion but alarmed)
+	fn = 0.0	# false negative (intrusion but not alarmed)
+
 	printout = ""
 	for input_test_file in test_files:
 		with open(os.path.join(test_dir_name, input_test_file), 'r') as f:
@@ -62,13 +66,20 @@ def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds)
 		if not abnormal:	# We have decided that the graph is not abnormal
 			printout += "This graph: " + input_test_file + " is considered NORMAL (" + str(num_fitted_model) + "/" + str(len(models)) + ").\n"
 			if "attack" not in input_test_file:
-				predict_correct = predict_correct + 1
+				tn = tn + 1
+			else:
+				fn = fn + 1
 		else:
 			printout += "This graph: " + input_test_file + " is considered ABNORMAL at " + str(max_abnormal_point) + "\n"
 			if "attack" in input_test_file:
-				predict_correct = predict_correct + 1
-	accuracy = predict_correct / total_graphs
-	return accuracy, printout
+				tp = tp + 1
+			else:
+				fp = fp + 1
+	precision = tp / (tp + fp)
+	recall = tp / (tp + fn)
+	accuracy = (tp + tn) / (tp + tn + fp + fn)
+	f_measure = 2 * (precision * recall) / (precision + recall)
+	return precision, recall, accuracy, f_measure, printout
 
 if __name__ == "__main__":
 
@@ -126,7 +137,7 @@ if __name__ == "__main__":
 	for tm in threshold_metric_config:
 		for ns in num_stds_config:
 			# Validation/Testing
-			test_accuracy, printout = test_all_testing_graphs(test_files, test_dir_name, models, tm, ns)
+			precision, recall, test_accuracy, f_measure, printout = test_all_testing_graphs(test_files, test_dir_name, models, tm, ns)
 			if test_accuracy > best_accuracy:
 				best_accuracy = test_accuracy
 				final_printout = printout
