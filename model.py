@@ -75,10 +75,19 @@ def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds)
 				tp = tp + 1
 			else:
 				fp = fp + 1
-	precision = tp / (tp + fp)
+	if (tp + fp) == 0:
+		precision = None
+	else:
+		precision = tp / (tp + fp)
+	if (tp + fn) == 0:
+		print "[ERROR] This should not have happened. Check your dataset."
+		sys.exit(1)
 	recall = tp / (tp + fn)
 	accuracy = (tp + tn) / (tp + tn + fp + fn)
-	f_measure = 2 * (precision * recall) / (precision + recall)
+	if precision == None:
+		f_measure = None
+	else:
+		f_measure = 2 * (precision * recall) / (precision + recall)
 	return precision, recall, accuracy, f_measure, printout
 
 if __name__ == "__main__":
