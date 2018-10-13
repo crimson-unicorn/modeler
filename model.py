@@ -85,7 +85,7 @@ def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds)
 		sys.exit(1)
 	recall = tp / (tp + fn)
 	accuracy = (tp + tn) / (tp + tn + fp + fn)
-	if (precision + recall) == 0:
+	if precision == None or (precision + recall) == 0:
 		f_measure = None
 	else:
 		f_measure = 2 * (precision * recall) / (precision + recall)
