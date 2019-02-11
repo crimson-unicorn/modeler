@@ -17,12 +17,45 @@ from scipy.spatial.distance import pdist, squareform, hamming
 from sklearn.metrics import silhouette_score, silhouette_samples
 from copy import deepcopy
 
+def save_model(model, model_num, fh):
+	"""Save a model with model number @model_num to a file with handle @fh.
+	"""
+	fh.write("MODEL " + str(model_num) + "\n")
+
+	num_cluster = len(model.medoids)
+	fh.write(str(num_cluster) + "\n")
+
+	for medoid in model.medoids:
+		for elem in medoid:
+			fh.write(str(int(float(elem))) + " ")
+		fh.write("\n")
+
+	for met in model.mean_thresholds:
+		fh.write(str(float(met)) + " ")
+	fh.write("\n")
+
+	for mat in model.max_thresholds:
+		fh.write(str(float(mat)) + " ")
+	fh.write("\n")
+
+	for std in model.stds:
+		fh.write(str(float(std)) + " ")
+	fh.write("\n")
+
+	for e in model.evolution:
+		fh.write(str(e) + " ")
+	fh.write("\n")
+	
+	fh.close()
+
 def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, num_trials=20, max_iterations=1000):
 	# Now we will open every file and read the sketch vectors in the file for modeling.
 	# We will create a model for each file and then merge the models if necessary (#TODO).
 	
 	# @models contains a list of models from each file.
 	models = []
+	# @savefile saves all the models
+	savefile = open('models.txt', 'a+')
 	for model_num, input_train_file in enumerate(train_files):
 		with open(os.path.join(train_dir_name, input_train_file), 'r') as f:
 			sketches = load_sketch(f)
@@ -40,7 +73,11 @@ def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, nu
 			print "Model " + str(model_num) + " is done!"
 			# model.print_mean_thresholds()
 			# model.print_evolution()
-			
+
+			# saving model to the file
+			print "Saving model " + str(model_num) + "..."
+			save_model(model, model_num, savefile)
+
 			models.append(model)
 		# We are done with this training file. Close the file and proceed to the next file.
 		f.close()
