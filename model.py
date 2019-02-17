@@ -45,8 +45,6 @@ def save_model(model, model_num, fh):
 	for e in model.evolution:
 		fh.write(str(e) + " ")
 	fh.write("\n")
-	
-	fh.close()
 
 def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, num_trials=20, max_iterations=1000):
 	# Now we will open every file and read the sketch vectors in the file for modeling.
@@ -81,6 +79,7 @@ def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, nu
 			models.append(model)
 		# We are done with this training file. Close the file and proceed to the next file.
 		f.close()
+	savefile.close()
 	return models
 
 # TODO: We can merge similar models in @models here.
