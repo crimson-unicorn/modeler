@@ -22,5 +22,5 @@ with open(args.input, 'r') as f:
 print "File name : " + str(args.input)
 print "Interval: " + str(args.interval)
 print "Total # of Sketches: " + str(total)
-print "# of Unique Sketches: " + len(unique_sketches) + " ; # of Sketches: " + len(sketches)
+print "# of Unique Sketches: " + str(len(unique_sketches)) + " ; # of Sketches: " + str(len(sketches))
 print "% of Unique Sketches: " + str(total / len(unique_sketches))
