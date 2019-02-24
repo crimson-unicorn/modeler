@@ -170,17 +170,34 @@ class Model():
 						prev = current
 						self.evolution.append(current)
 
+
+def sortfilenames(names):
+	"""
+	Sort filenames based on their extensions.
+	"""
+	return sorted(names, key=lambda item: (int(item.split('.')[0].split('-')[-1])))
+
+
 def load_sketch(file_handle):
 	"""
 	Load sketches in a file (from @file_handle) to memory as numpy arrays.
 	"""
 	sketches = []	# The sketch on row i is the ith stage of the changing graph.
 	# We read all the sketches in the file and save it in memory in @sketches
-	for line in file_handle:
+	for num,line in enumerate(file_handle):
 		sketch_vector = map(long, line.strip().split(" "))
-		sketches.append(sketch_vector)
-
+		if num == 0:
+			#TODO: we assume now the first sketch length is always correct.
+			#TODO: we can pass in an argument to check size, future work
+			standard_length = len(sketch_vector)
+		if len(sketch_vector) != standard_length:
+			print("check sketch # " + str(num) + " with smaller length (" + str(len(sketch_vector)) + ") than required (" + str(standard_length) + ")" )
+		elif np.count_nonzero(np.asarray(sketch_vector)) == 0:
+			print("sketch # " + str(num) + " contains only 0s")
+		else:
+			sketches.append(sketch_vector)
 	sketches = np.array(sketches)
+	print("Sketch shape: " + str(sketches.shape))
 	return sketches
 
 def pairwise_distance(arr, method='hamming'):

@@ -56,9 +56,14 @@ def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, nu
 	savefile = open('models.txt', 'a+')
 	for model_num, input_train_file in enumerate(train_files):
 		with open(os.path.join(train_dir_name, input_train_file), 'r') as f:
+			print input_train_file
 			sketches = load_sketch(f)
 			# @dists now contains pairwise Hamming distance (using @pdist) between any two sketches in @sketches.
-			dists = pairwise_distance(sketches)
+			try:
+				dists = pairwise_distance(sketches)
+			except Exception as e:
+				print "Exception in model file " + str(input_train_file) + ": " + str(e)
+				raise RuntimeError("Model cannot be built properly: " + str(e))
 			# We define a @distance function to use in @optimize.
 			def distance(x, y):
 				return dists[x][y]
@@ -148,7 +153,8 @@ if __name__ == "__main__":
 	args = vars(parser.parse_args())
 
 	train_dir_name = args['train_dir']	# The directory absolute path name from the user input of training vectors.
-	train_files = os.listdir(train_dir_name)	# The training file names within that directory.
+	train_files = sortfilenames(os.listdir(train_dir_name))	# The training file names within that directory.
+	print "Processing " + str(len(train_files)) + " training files..."
 	# Note that we will read every file within the directory @train_dir_name.
 	# We do not do error checking here. Therefore, make sure every file in @train_dir_name is valid.
 	# We do the same for validation/testing files.
