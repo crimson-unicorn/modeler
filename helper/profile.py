@@ -178,20 +178,17 @@ def sortfilenames(names):
 	return sorted(names, key=lambda item: (int(item.split('.')[0].split('-')[-1])))
 
 
-def load_sketch(file_handle):
+def load_sketch(file_handle, size_check):
 	"""
 	Load sketches in a file (from @file_handle) to memory as numpy arrays.
+	@size_check: check if the sketch size is the same as @size_check
 	"""
 	sketches = []	# The sketch on row i is the ith stage of the changing graph.
 	# We read all the sketches in the file and save it in memory in @sketches
 	for num,line in enumerate(file_handle):
 		sketch_vector = map(long, line.strip().split(" "))
-		if num == 0:
-			#TODO: we assume now the first sketch length is always correct.
-			#TODO: we can pass in an argument to check size, future work
-			standard_length = len(sketch_vector)
-		if len(sketch_vector) != standard_length:
-			print("check sketch # " + str(num) + " with smaller length (" + str(len(sketch_vector)) + ") than required (" + str(standard_length) + ")" )
+		if len(sketch_vector) != size_check:
+			print("check sketch # " + str(num) + " with smaller length (" + str(len(sketch_vector)) + ") than required (" + str(size_check) + ")" )
 		elif np.count_nonzero(np.asarray(sketch_vector)) == 0:
 			print("sketch # " + str(num) + " contains only 0s")
 		else:

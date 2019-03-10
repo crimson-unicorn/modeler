@@ -46,7 +46,7 @@ def save_model(model, model_num, fh):
 		fh.write(str(e) + " ")
 	fh.write("\n")
 
-def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, num_trials=20, max_iterations=1000):
+def model_all_training_graphs(train_files, train_dir_name, size_check, max_cluster_num=6, num_trials=20, max_iterations=1000):
 	# Now we will open every file and read the sketch vectors in the file for modeling.
 	# We will create a model for each file and then merge the models if necessary (#TODO).
 	
@@ -57,7 +57,7 @@ def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, nu
 	for model_num, input_train_file in enumerate(train_files):
 		with open(os.path.join(train_dir_name, input_train_file), 'r') as f:
 			print input_train_file
-			sketches = load_sketch(f)
+			sketches = load_sketch(f, size_check)
 			# @dists now contains pairwise Hamming distance (using @pdist) between any two sketches in @sketches.
 			try:
 				dists = pairwise_distance(sketches)
@@ -89,7 +89,7 @@ def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, nu
 
 # TODO: We can merge similar models in @models here.
 
-def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds):
+def test_all_testing_graphs(test_files, test_dir_name, size_check, models, metric, num_stds):
 	# Validation/Testing code starts here.
 	total_graphs = 0.0
 	tp = 0.0	# true positive (intrusion and alarmed)
@@ -100,7 +100,10 @@ def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds)
 	printout = ""
 	for input_test_file in test_files:
 		with open(os.path.join(test_dir_name, input_test_file), 'r') as f:
-			sketches = load_sketch(f)
+			sketches = load_sketch(f, size_check)
+			if sketches.size == 0:
+				f.close()
+				continue
 			abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds)
 		f.close()
 		total_graphs = total_graphs + 1
@@ -146,6 +149,7 @@ if __name__ == "__main__":
 	# parser.add_argument('--validate_dir', help='Absolute path to the directory that contains all validation vectors', required=True)
 	# '--test_dir <directory_path>': the path to the directory that contains data files of all testing graphs.
 	parser.add_argument('--test_dir', help='Absolute path to the directory that contains all testing vectors', required=True)
+	parser.add_argument('--size', help='The expected size of a single sketch', type=int, required=True)
 	# '--threshold_metric <mean/max>': whether the threshold uses mean or max of the cluster distances between cluster members and the medoid.
 	parser.add_argument('--threshold_metric', help='options: mean/max', required=False)
 	# '--num_stds <number>': the number of standard deviations a threshold should tolerate.
@@ -176,7 +180,7 @@ if __name__ == "__main__":
 		num_stds_config = [num_stds]
 
 	# Modeling (training)
-	models = model_all_training_graphs(train_files, train_dir_name)
+	models = model_all_training_graphs(train_files, train_dir_name, args['size'])
 
 	print "We will attempt multiple cluster threshold configurations for the best results."
 	print "Trying: mean/max distances with 1.0, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0 standard deviation(s)..."
@@ -191,7 +195,7 @@ if __name__ == "__main__":
 	for tm in threshold_metric_config:
 		for ns in num_stds_config:
 			# Validation/Testing
-			test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(test_files, test_dir_name, models, tm, ns)
+			test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(test_files, test_dir_name, args['size'], models, tm, ns)
 			if test_accuracy > best_accuracy:
 				best_accuracy = test_accuracy
 				final_precision = test_precision
