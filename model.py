@@ -149,7 +149,7 @@ if __name__ == "__main__":
 	# parser.add_argument('--validate_dir', help='Absolute path to the directory that contains all validation vectors', required=True)
 	# '--test_dir <directory_path>': the path to the directory that contains data files of all testing graphs.
 	parser.add_argument('--test_dir', help='Absolute path to the directory that contains all testing vectors', required=True)
-	parser.add_argument('--size', help='The expected size of a single sketch', type=int, required=True)
+	parser.add_argument('--size', help='The expected size of a single sketch', type=int, default=2000, required=False)
 	# '--threshold_metric <mean/max>': whether the threshold uses mean or max of the cluster distances between cluster members and the medoid.
 	parser.add_argument('--threshold_metric', help='options: mean/max', required=False)
 	# '--num_stds <number>': the number of standard deviations a threshold should tolerate.
