@@ -60,7 +60,7 @@ def load_sketches(file_names, dir_name, size_check):
 				included_sketches.append(sketches)
 				included_targets.append(file_names[num])
 				f.close()
-	return included_sketches, included_targets
+	return np.asarray(included_sketches), np.asarray(included_targets)
 
 def model_all_training_graphs(train_sketches, train_names, size_check, max_cluster_num=6, num_trials=20, max_iterations=1000):
 	# Now we will open every file and read the sketch vectors in the file for modeling.
@@ -193,8 +193,8 @@ if __name__ == "__main__":
 	print "We will perform " + str(num_cross_validation) + "-fold cross validation..."
 	for benign_train, benign_validate in kf.split(train_targets):
 		benign_train_sketches, benign_train_names, benign_validate_sketches, benign_validate_names = train_sketches[benign_train], train_targets[benign_train], train_sketches[benign_validate], train_targets[benign_validate]
-		test_sketches.extend(benign_validate_sketches)
-		test_targets.extend(benign_validate_names)
+		test_sketches = np.concatenate((test_sketches, benign_validate_sketches), axis=0)
+		test_targets = np.concatenate((test_targets, benign_validate_names), axis=0)
 
 		# Modeling (training)
 		models = model_all_training_graphs(benign_train_sketches, benign_train_names, args['size'])
