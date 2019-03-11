@@ -188,7 +188,7 @@ if __name__ == "__main__":
 	else:
 		num_stds_config = [num_stds]
 
-	num_cross_validation = 3
+	num_cross_validation = 5
 	kf = KFold(n_splits=num_cross_validation)
 	print "We will perform " + str(num_cross_validation) + "-fold cross validation..."
 	for benign_train, benign_validate in kf.split(train_targets):
