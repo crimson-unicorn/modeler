@@ -188,16 +188,21 @@ if __name__ == "__main__":
 	else:
 		num_stds_config = [num_stds]
 
+	# only need to generate models once for all CVs
+	all_models = model_all_training_graphs(train_sketches, train_targets, args['size'])
+
 	num_cross_validation = 5
 	kf = KFold(n_splits=num_cross_validation)
 	print "We will perform " + str(num_cross_validation) + "-fold cross validation..."
 	for benign_train, benign_validate in kf.split(train_targets):
-		benign_train_sketches, benign_train_names, benign_validate_sketches, benign_validate_names = train_sketches[benign_train], train_targets[benign_train], train_sketches[benign_validate], train_targets[benign_validate]
-		test_sketches = np.concatenate((test_sketches, benign_validate_sketches), axis=0)
-		test_targets = np.concatenate((test_targets, benign_validate_names), axis=0)
+		benign_validate_sketches, benign_validate_names = train_sketches[benign_validate], train_targets[benign_validate]
+		kf_test_sketches = np.concatenate((test_sketches, benign_validate_sketches), axis=0)
+		kf_test_targets = np.concatenate((test_targets, benign_validate_names), axis=0)
 
 		# Modeling (training)
-		models = model_all_training_graphs(benign_train_sketches, benign_train_names, args['size'])
+		models = []
+		for index in benign_train:
+			models.append(all_models[index])
 
 		print "We will attempt multiple cluster threshold configurations for the best results."
 		print "Trying: mean/max distances with 1.0, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0 standard deviation(s)..."
@@ -212,7 +217,7 @@ if __name__ == "__main__":
 		for tm in threshold_metric_config:
 			for ns in num_stds_config:
 				# Validation/Testing
-				test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(test_sketches, test_targets, args['size'], models, tm, ns)
+				test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(kf_test_sketches, kf_test_targets, args['size'], models, tm, ns)
 				if test_accuracy > best_accuracy:
 					best_accuracy = test_accuracy
 					final_precision = test_precision
