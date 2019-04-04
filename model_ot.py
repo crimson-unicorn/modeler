@@ -108,7 +108,7 @@ class Unicorn(MeasurementInterface):
 		for i in range(len(train_base_files)):
 			train_base_file_name = os.path.join(train_base_dir_name, train_base_files[i])
 			train_stream_file_name = os.path.join(train_stream_dir_name, train_stream_files[i])
-			train_sketch_file = 'sketch_' + str(i) + '.txt'
+			train_sketch_file = 'sketch-' + str(i) + '.txt'
 			train_sketch_file_name = os.path.join(train_sketch_dir_name, train_sketch_file)
 
 			run_cmd = '../graphchi-cpp/bin/streaming/main filetype edgelist'
