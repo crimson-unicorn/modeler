@@ -190,6 +190,7 @@ class Unicorn(MeasurementInterface):
 		# We use (true negatives)/(total validation datasets) as our accuracy metric because we want to minimize that now.
 		best_accuracy = 0.0
 		average_accuracy = 0.0
+		tp_associated_with_best_accuracy = 0.0
 		# final_printout = ""
 		# final_precision = None
 		# final_recall = None
@@ -207,16 +208,18 @@ class Unicorn(MeasurementInterface):
 				models.append(all_models[index])
 
 			# Testing
-			tn, total_normal_graphs = test_all_graphs(kf_test_sketches, kf_test_targets, 2000, models, THRESHOLD_METRIC, STD)
+			tn, tp, total_normal_graphs = test_all_graphs(kf_test_sketches, kf_test_targets, 2000, models, THRESHOLD_METRIC, STD)
 			test_accuracy = tn / total_normal_graphs	#TODO: Currently we are concerned only of FPs. 
 			if test_accuracy > best_accuracy:
 				best_accuracy = test_accuracy
+				tp_associated_with_best_accuracy = tp
 			average_accuracy = average_accuracy + test_accuracy
 			# print "Test Accuracy: " + str(test_accuracy)
 	
 		average_accuracy = average_accuracy / NUM_CROSS_VALIDATION
 		print "Average Accuracy (TN/TOTAL): {}".format(average_accuracy)
 		print "Best Accuracy (TN/TOTAL): {}".format(best_accuracy)
+		print "TP associated with best accuracy: {}".format(tp_associated_with_best_accuracy)
 
 		# For next experiment, remove sketch files from this experiment
 		for sketch_train_file in sketch_train_files:
@@ -284,7 +287,7 @@ def test_all_graphs(test_sketches, test_targets, size_check, models, metric, num
 		f_measure = None
 	else:
 		f_measure = 2 * (precision * recall) / (precision + recall)
-	return tn, total_normal_graphs
+	return tn, tp, total_normal_graphs
 
 if __name__ == "__main__":
 	args = parser.parse_args()
