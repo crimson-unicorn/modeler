@@ -207,7 +207,7 @@ class Unicorn(MeasurementInterface):
 				models.append(all_models[index])
 
 			# Testing
-			tn, total_normal_graphs = test_all_graphs(kf_test_sketches, kf_test_targets, 2000, models, tm, ns)
+			tn, total_normal_graphs = test_all_graphs(kf_test_sketches, kf_test_targets, 2000, models, THRESHOLD_METRIC, STD)
 			test_accuracy = tn / total_normal_graphs	#TODO: Currently we are concerned only of FPs. 
 			if test_accuracy > best_accuracy:
 				best_accuracy = test_accuracy
