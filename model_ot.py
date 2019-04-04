@@ -111,7 +111,7 @@ class Unicorn(MeasurementInterface):
 			train_sketch_file = 'sketch_' + str(i) + '.txt'
 			train_sketch_file_name = os.path.join(train_sketch_dir_name, train_sketch_file)
 
-			run_cmd = 'bin/streaming/main filetype edgelist'
+			run_cmd = '../graphchi-cpp/bin/streaming/main filetype edgelist'
 			run_cmd += ' file ' + train_base_file_name
 			run_cmd += ' niters 100000'
 			run_cmd += ' stream_file ' + train_stream_file_name
