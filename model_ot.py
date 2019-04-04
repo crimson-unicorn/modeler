@@ -81,10 +81,10 @@ class Unicorn(MeasurementInterface):
 		print "\t\t Chunk Size (currently fixed): 5" # + str(cfg['chunk-size'])
 
 		# Compile GraphChi with different flags.
-		gcc_cmd = 'g++ -std=c++11 -g -O3 -I/usr/local/include/ -I./src/  -fopenmp -Wall -Wno-strict-aliasing -lpthread'
+		gcc_cmd = 'g++ -std=c++11 -g -O3 -I/usr/local/include/ -I../graphchi-cpp/src/ -fopenmp -Wall -Wno-strict-aliasing -lpthread'
 		gcc_cmd += ' -DSKETCH_SIZE=2000' # + str(cfg['sketch-size'])
 		gcc_cmd += ' -DK_HOPS=3' # + str(cfg['k-hops'])
-		gcc_cmd += ' -DDEBUG -DPREGEN=10000 -DMEMORY=1 -g -Istreaming/ streaming/main.cpp -o bin/streaming/main -lz'
+		gcc_cmd += ' -DDEBUG -DPREGEN=10000 -DMEMORY=1 -g -I../graphchi-cpp/streaming/ ../graphchi-cpp/streaming/main.cpp -o ../graphchi-cpp/bin/streaming/main -lz'
 
 		compile_result = self.call_program(gcc_cmd)
 		assert compile_result['returncode'] == 0
