@@ -29,6 +29,7 @@ from opentuner.search.objective import MaximizeAccuracy
 from opentuner.resultsdb.models import Result
 from opentuner.measurement.inputmanager import FixedInputManager
 
+from RegularStepSearch import *
 #TODO: The value 2000 in the code is hardcoded. It is actually sketch size.
 
 # Marcos
