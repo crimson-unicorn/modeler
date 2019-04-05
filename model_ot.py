@@ -49,6 +49,12 @@ parser.add_argument('--sketch_folder_train', help='Path to the directory that sa
 parser.add_argument('--base_folder_test', help='Path to the directory that contains edge list files of base part of the test graphs', required=True)
 parser.add_argument('--stream_folder_test', help='Path to the directory that contains edge list files of streaming part of the test graphs', required=True)
 parser.add_argument('--sketch_folder_test', help='Path to the directory that saves the test graph sketches', required=True)
+parser.add_argument('--interval', help='Tune interval hyperparameter', type=int, nargs='?', required=False, const='3000')
+parser.add_argument('--sketch_size', help='Tune sketch size hyperparameter', type=int, nargs='?', required=False, const='2000')
+parser.add_argument('--k_hops', help='Tune hop hyperparameter', type=int, nargs='?', required=False, const='3')
+parser.add_argument('--chunk_size', help='Tune chunk size hyperparameter', type=int, nargs='?', required=False, const='5')
+parser.add_argument('--lambda_param', help='Tune lambda hyperparameter', type=float, nargs='?', required=False, const='0.02')
+
 
 class Unicorn(MeasurementInterface):
 	'''
@@ -64,27 +70,55 @@ class Unicorn(MeasurementInterface):
 		Define the search space by creating a ConfigurationManipulator
 		'''
 		manipulator = ConfigurationManipulator()
-		# manipulator.add_parameter(FloatParameter('lambda', 0.05, 0.3))
-		manipulator.add_parameter(IntegerParameter('interval', 1000, 5000))
-		# manipulator.add_parameter(IntegerParameter('chunk-size', 15, 20))
+		if self.args.interval is None:
+			manipulator.add_parameter(IntegerParameter('interval', 1000, 5000))
+		if self.args.sketch_size is None:
+			manipulator.add_parameter(IntegerParameter('sketch-size', 1000, 5000))
+		if self.args.k_hops is None:
+			manipulator.add_parameter(IntegerParameter('k-hops', 1, 5))
+		if self.args.chunk_size is None:
+			manipulator.add_parameter(IntegerParameter('chunk-size', 5, 20))
+		if self.args.lambda_param is None:
+			manipulator.add_parameter(FloatParameter('lambda-param', 0.0, 1.0))
 		# manipulator.add_parameter(EnumParameter('threshold-metric', ['mean', 'max']))
 		# manipulator.add_parameter(FloatParameter('num-stds', 3.5, 6.0))
-		# manipulator.add_parameter(IntegerParameter('sketch-size', 2000, 2500))
-		# manipulator.add_parameter(IntegerParameter('k-hops', 3, 4))
 		return manipulator
 
 	def run(self, desired_result, input, limit):
 		cfg = desired_result.configuration.data
 
-		print "Configuration: " # + cfg['threshold-metric'] + " with " + str(cfg['num-stds'])
-		print "\t\t Lambda (currently fixed): 0.02" # + str(cfg['lambda'])
-		print "\t\t Interval: " + str(cfg['interval'])
-		print "\t\t Chunk Size (currently fixed): 5" # + str(cfg['chunk-size'])
+		if self.args.interval is None:
+			interval_param = cfg['interval']
+		else:
+			interval_param = self.args.interval
+		if self.args.sketch_size is None:
+			sketch_size_param = cfg['sketch-size']
+		else:
+			sketch_size_param = self.args.sketch_size
+		if self.args.k_hops is None:
+			k_hops_param = cfg['k-hops']
+		else:
+			k_hops_param = self.args.k_hops
+		if self.args.chunk_size is None:
+			chunk_size_param = cfg['chunk-size']
+		else:
+			chunk_size_param = self.args.chunk_size
+		if self.args.lambda_param is None:
+			lambda_param = cfg['lambda-param']
+		else:
+			lambda_param = self.args.lambda_param
+
+		print "Configuration: "
+		print "\t\t Interval: " + str(interval_param)
+		print "\t\t Sketch Size: " + str(sketch_size_param)
+		print "\t\t K Hops: " + str(k_hops_param)
+		print "\t\t Chunk Size: " + str(chunk_size_param)
+		print "\t\t Lambda: " + str(lambda_param)
 
 		# Compile GraphChi with different flags.
 		gcc_cmd = 'g++ -std=c++11 -g -O3 -I/usr/local/include/ -I../graphchi-cpp/src/ -fopenmp -Wall -Wno-strict-aliasing -lpthread'
-		gcc_cmd += ' -DSKETCH_SIZE=2000' # + str(cfg['sketch-size'])
-		gcc_cmd += ' -DK_HOPS=3' # + str(cfg['k-hops'])
+		gcc_cmd += ' -DSKETCH_SIZE=' + str(sketch_size_param)
+		gcc_cmd += ' -DK_HOPS=' + str(k_hops_param)
 		gcc_cmd += ' -DDEBUG -DPREGEN=10000 -DMEMORY=1 -g -I../graphchi-cpp/streaming/ ../graphchi-cpp/streaming/main.cpp -o ../graphchi-cpp/bin/streaming/main -lz'
 
 		compile_result = self.call_program(gcc_cmd)
@@ -116,13 +150,13 @@ class Unicorn(MeasurementInterface):
 			run_cmd += ' file ' + train_base_file_name
 			run_cmd += ' niters 100000'
 			run_cmd += ' stream_file ' + train_stream_file_name
-			run_cmd += ' decay 500' # + str(cfg['decay'])
-			run_cmd += ' lambda 0.02' # + str(cfg['lambda'])
-			run_cmd += ' interval ' + str(cfg['interval'])
+			run_cmd += ' decay 500'
+			run_cmd += ' lambda ' + str(lambda_param)
+			run_cmd += ' interval ' + str(interval_param)
 			run_cmd += ' multiple 1'
 			run_cmd += ' sketch_file ' + train_sketch_file_name
 			run_cmd += ' chunkify 1 '
-			run_cmd += ' chunk_size 5' # + str(cfg['chunk-size'])
+			run_cmd += ' chunk_size ' + str(chunk_size_param)
 
 			print run_cmd
 			run_result = self.call_program(run_cmd)
@@ -153,13 +187,13 @@ class Unicorn(MeasurementInterface):
 			run_cmd += ' file ' + test_base_file_name
 			run_cmd += ' niters 100000'
 			run_cmd += ' stream_file ' + test_stream_file_name
-			run_cmd += ' decay 500' # + str(cfg['decay'])
-			run_cmd += ' lambda 0.02' # + str(cfg['lambda'])
-			run_cmd += ' interval ' + str(cfg['interval'])
+			run_cmd += ' decay 500'
+			run_cmd += ' lambda ' + str(lambda_param)
+			run_cmd += ' interval ' + str(interval_param)
 			run_cmd += ' multiple 1'
 			run_cmd += ' sketch_file ' + test_sketch_file_name
 			run_cmd += ' chunkify 1 '
-			run_cmd += ' chunk_size 5' # + str(cfg['chunk-size'])
+			run_cmd += ' chunk_size ' + str(chunk_size_param)
 
 			print run_cmd
 			run_result = self.call_program(run_cmd)
@@ -189,9 +223,7 @@ class Unicorn(MeasurementInterface):
 		print "We will perform " + str(NUM_CROSS_VALIDATION) + "-fold cross validation..."
 		# We record the average results
 		# We use (true negatives)/(total validation datasets) as our accuracy metric because we want to minimize that now.
-		best_accuracy = 0.0
 		average_accuracy = 0.0
-		tp_associated_with_best_accuracy = 0.0
 		# final_printout = ""
 		# final_precision = None
 		# final_recall = None
@@ -209,18 +241,24 @@ class Unicorn(MeasurementInterface):
 				models.append(all_models[index])
 
 			# Testing
-			tn, tp, total_normal_graphs = test_all_graphs(kf_test_sketches, kf_test_targets, 2000, models, THRESHOLD_METRIC, STD)
+			tn, tp, fn, fp, total_normal_graphs, total_graphs, recall, precision, accuracy, f_measure  = test_all_graphs(kf_test_sketches, kf_test_targets, 2000, models, THRESHOLD_METRIC, STD)
 			test_accuracy = tn / total_normal_graphs	#TODO: Currently we are concerned only of FPs. 
-			if test_accuracy > best_accuracy:
-				best_accuracy = test_accuracy
-				tp_associated_with_best_accuracy = tp
+
 			average_accuracy = average_accuracy + test_accuracy
+			print "In this Fold: "
+			print "TN: {}".format(tn)
+			print "TP: {}".format(tp)
+			print "FN: {}".format(fn)
+			print "FP: {}".format(fp)
+			print "Recall: {}".format(recall)
+			print "Precision: {}".format(precision)
+			print "Accuracy: {}".format(accuracy)
+			print "F_SCORE: {}".format(f_measure)
 			# print "Test Accuracy: " + str(test_accuracy)
 	
 		average_accuracy = average_accuracy / NUM_CROSS_VALIDATION
-		print "Average Accuracy (TN/TOTAL): {}".format(average_accuracy)
-		print "Best Accuracy (TN/TOTAL): {}".format(best_accuracy)
-		print "TP associated with best accuracy: {}".format(tp_associated_with_best_accuracy)
+		print "Five Fold Average:"
+		print "Average TN/TOTAL: {}".format(average_accuracy)
 
 		# For next experiment, remove sketch files from this experiment
 		for sketch_train_file in sketch_train_files:
@@ -288,11 +326,12 @@ def test_all_graphs(test_sketches, test_targets, size_check, models, metric, num
 		f_measure = None
 	else:
 		f_measure = 2 * (precision * recall) / (precision + recall)
-	return tn, tp, total_normal_graphs
+	return tn, tp, fn, fp, total_normal_graphs, total_graphs, recall, precision, accuracy, f_measure 
 
 if __name__ == "__main__":
 	args = parser.parse_args()
 	Unicorn.main(args)
+
 
 
 
