@@ -30,10 +30,8 @@ from opentuner.resultsdb.models import Result
 from opentuner.measurement.inputmanager import FixedInputManager
 
 from RegularStepSearch import *
-#TODO: The value 2000 in the code is hardcoded. It is actually sketch size.
 
 # Marcos
-NUM_TRIALS = 20
 SEED = 42
 NUM_CROSS_VALIDATION = 5
 THRESHOLD_METRIC = 'mean'
@@ -214,11 +212,11 @@ class Unicorn(MeasurementInterface):
 		# Note that we will read every file within the directory @train_dir_name.
 		# We do not do error checking here. Therefore, make sure every file in @train_dir_name is valid.
 		sketch_train_files = sortfilenames(os.listdir(train_sketch_dir_name))
-		train_sketches, train_targets = load_sketches(sketch_train_files, train_sketch_dir_name, 2000)
+		train_sketches, train_targets = load_sketches(sketch_train_files, train_sketch_dir_name, sketch_size_param)
 		sketch_test_files = sortfilenames(os.listdir(test_sketch_dir_name))
-		test_sketches, test_targets = load_sketches(sketch_test_files, test_sketch_dir_name, 2000)
+		test_sketches, test_targets = load_sketches(sketch_test_files, test_sketch_dir_name, sketch_size_param)
 		# We generate models once for all CVs
-		all_models = model_all_training_graphs(train_sketches, train_targets, 2000)
+		all_models = model_all_training_graphs(train_sketches, train_targets, sketch_size_param)
 
 		print "We will perform " + str(NUM_CROSS_VALIDATION) + "-fold cross validation..."
 		# We record the average results
@@ -241,7 +239,7 @@ class Unicorn(MeasurementInterface):
 				models.append(all_models[index])
 
 			# Testing
-			tn, tp, fn, fp, total_normal_graphs, total_graphs, recall, precision, accuracy, f_measure  = test_all_graphs(kf_test_sketches, kf_test_targets, 2000, models, THRESHOLD_METRIC, STD)
+			tn, tp, fn, fp, total_normal_graphs, total_graphs, recall, precision, accuracy, f_measure  = test_all_graphs(kf_test_sketches, kf_test_targets, sketch_size_param, models, THRESHOLD_METRIC, STD)
 			test_accuracy = tn / total_normal_graphs	#TODO: Currently we are concerned only of FPs. 
 
 			average_accuracy = average_accuracy + test_accuracy
