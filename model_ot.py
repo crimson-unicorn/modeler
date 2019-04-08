@@ -16,7 +16,7 @@ from helper.profile import *
 from model import load_sketches, model_all_training_graphs, test_all_testing_graphs
 from scipy.spatial.distance import pdist, squareform, hamming
 from sklearn.metrics import silhouette_score, silhouette_samples
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, ShuffleSplit
 from copy import deepcopy
 
 import opentuner
@@ -227,7 +227,8 @@ class Unicorn(MeasurementInterface):
 		# final_recall = None
 		# final_f = None
 
-		kf = KFold(n_splits=NUM_CROSS_VALIDATION)
+		# kf = KFold(n_splits=NUM_CROSS_VALIDATION)
+		kf = ShuffleSplit(n_splits=NUM_CROSS_VALIDATION, test_size=0.2, random_state=0)
 		for benign_train, benign_validate in kf.split(train_targets):
 			benign_validate_sketches, benign_validate_names = train_sketches[benign_validate], train_targets[benign_validate]
 			kf_test_sketches = np.concatenate((test_sketches, benign_validate_sketches), axis=0)
