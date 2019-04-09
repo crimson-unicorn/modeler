@@ -193,7 +193,7 @@ if __name__ == "__main__":
 
 	num_cross_validation = 5
 	# kf = KFold(n_splits=num_cross_validation)
-	kf = ShuffleSplit(n_splits=NUM_CROSS_VALIDATION, test_size=0.2, random_state=0)
+	kf = ShuffleSplit(n_splits=num_cross_validation, test_size=0.2, random_state=0)
 	print "We will perform " + str(num_cross_validation) + "-fold cross validation..."
 	for benign_train, benign_validate in kf.split(train_targets):
 		benign_validate_sketches, benign_validate_names = train_sketches[benign_validate], train_targets[benign_validate]
