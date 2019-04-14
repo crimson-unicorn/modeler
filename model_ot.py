@@ -34,8 +34,6 @@ from RegularStepSearch import *
 # Marcos
 SEED = 42
 NUM_CROSS_VALIDATION = 5
-THRESHOLD_METRIC = 'mean'
-STD = 2.5
 random.seed(SEED)
 np.random.seed(SEED)
 
@@ -226,6 +224,8 @@ class Unicorn(MeasurementInterface):
 		all_models = model_all_training_graphs(train_sketches, train_targets, sketch_size_param)
 
 		print "We will perform " + str(NUM_CROSS_VALIDATION) + "-fold cross validation..."
+		threshold_metric_config = ['mean', 'max']
+		num_stds_config = [1.0, 1,1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0]
 		# We record the average results
 		# We use (true negatives)/(total validation datasets) as our accuracy metric because we want to minimize that now.
 		average_accuracy = 0.0
@@ -247,24 +247,25 @@ class Unicorn(MeasurementInterface):
 				models.append(all_models[index])
 
 			# Testing
-			tn, tp, fn, fp, total_normal_graphs, total_graphs, recall, precision, accuracy, f_measure  = test_all_graphs(kf_test_sketches, kf_test_targets, sketch_size_param, models, THRESHOLD_METRIC, STD)
-			test_accuracy = tn / total_normal_graphs	#TODO: Currently we are concerned only of FPs. 
+			print "We will attempt multiple cluster threshold configurations for the best results."
+			print "Trying: mean/max distances with 1.0, 1,1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0 standard deviation(s)..."
+			for tm in threshold_metric_config:
+				for ns in num_stds_config:
+					tn, tp, fn, fp, total_normal_graphs, total_graphs, recall, precision, accuracy, f_measure, printout  = test_all_graphs(kf_test_sketches, kf_test_targets, sketch_size_param, models, tm, ns)
+					print "Threshold metric: " + tm
+					print "Number of standard deviations: " + str(ns)
+					print "TP: " + str(tp) + "\t TN: " + str(tn) + "\t FP: " + str(fp) + "\t FN: " + str(fn)
+					print "Test accuracy: " + str(accuracy)
+					print "Test Precision: " + str(precision)
+					print "Test Recall: " + str(recall)
+					print "Test F-1 Score: " + str(f_measure)
+					print "Results: "
+					print printout
 
+			# This value currently does not have any significance. We create just so that OpenTuner has an oracle.
+			test_accuracy = tn / total_normal_graphs	#TODO: Currently we are concerned only of FPs. 
 			average_accuracy = average_accuracy + test_accuracy
-			print "In this Fold: "
-			print "TN: {}".format(tn)
-			print "TP: {}".format(tp)
-			print "FN: {}".format(fn)
-			print "FP: {}".format(fp)
-			print "Recall: {}".format(recall)
-			print "Precision: {}".format(precision)
-			print "Accuracy: {}".format(accuracy)
-			print "F_SCORE: {}".format(f_measure)
-			# print "Test Accuracy: " + str(test_accuracy)
-	
 		average_accuracy = average_accuracy / NUM_CROSS_VALIDATION
-		print "Five Fold Average:"
-		print "Average TN/TOTAL: {}".format(average_accuracy)
 
 		# For next experiment, remove sketch files from this experiment
 		for sketch_train_file in sketch_train_files:
@@ -332,7 +333,7 @@ def test_all_graphs(test_sketches, test_targets, size_check, models, metric, num
 		f_measure = None
 	else:
 		f_measure = 2 * (precision * recall) / (precision + recall)
-	return tn, tp, fn, fp, total_normal_graphs, total_graphs, recall, precision, accuracy, f_measure 
+	return tn, tp, fn, fp, total_normal_graphs, total_graphs, recall, precision, accuracy, f_measure, printout
 
 if __name__ == "__main__":
 	args = parser.parse_args()
