@@ -47,12 +47,12 @@ parser.add_argument('--sketch_folder_train', help='Path to the directory that sa
 parser.add_argument('--base_folder_test', help='Path to the directory that contains edge list files of base part of the test graphs', required=True)
 parser.add_argument('--stream_folder_test', help='Path to the directory that contains edge list files of streaming part of the test graphs', required=True)
 parser.add_argument('--sketch_folder_test', help='Path to the directory that saves the test graph sketches', required=True)
-parser.add_argument('--interval', help='Tune interval hyperparameter', type=int, nargs='?', required=False, const='3000')
+parser.add_argument('--window', help='Tune window hyperparameter', type=int, nargs='?', required=False, const='3000')
+parser.add_argument('--interval', help='Tune interval hyperparameter', type=int, nargs='?', required=False, const='6000')
 parser.add_argument('--sketch_size', help='Tune sketch size hyperparameter', type=int, nargs='?', required=False, const='2000')
 parser.add_argument('--k_hops', help='Tune hop hyperparameter', type=int, nargs='?', required=False, const='3')
 parser.add_argument('--chunk_size', help='Tune chunk size hyperparameter', type=int, nargs='?', required=False, const='5')
 parser.add_argument('--lambda_param', help='Tune lambda hyperparameter', type=float, nargs='?', required=False, const='0.02')
-
 
 class Unicorn(MeasurementInterface):
 	'''
@@ -68,8 +68,10 @@ class Unicorn(MeasurementInterface):
 		Define the search space by creating a ConfigurationManipulator
 		'''
 		manipulator = ConfigurationManipulator()
+		if self.args.window is None:
+			manipulator.add_parameter(IntegerParameter('window', 1000, 5000))
 		if self.args.interval is None:
-			manipulator.add_parameter(IntegerParameter('interval', 1000, 5000))
+			manipulator.add_parameter(IntegerParameter('interval', 2000, 10000))
 		if self.args.sketch_size is None:
 			manipulator.add_parameter(IntegerParameter('sketch-size', 1000, 5000))
 		if self.args.k_hops is None:
@@ -85,6 +87,10 @@ class Unicorn(MeasurementInterface):
 	def run(self, desired_result, input, limit):
 		cfg = desired_result.configuration.data
 
+		if self.args.window is None:
+			window_param = cfg['window']
+		else:
+			window_param = self.args.window
 		if self.args.interval is None:
 			interval_param = cfg['interval']
 		else:
@@ -107,6 +113,7 @@ class Unicorn(MeasurementInterface):
 			lambda_param = self.args.lambda_param
 
 		print "Configuration: "
+		print "\t\t Window: " + str(window_param)
 		print "\t\t Interval: " + str(interval_param)
 		print "\t\t Sketch Size: " + str(sketch_size_param)
 		print "\t\t K Hops: " + str(k_hops_param)
@@ -150,8 +157,8 @@ class Unicorn(MeasurementInterface):
 			run_cmd += ' stream_file ' + train_stream_file_name
 			run_cmd += ' decay 500'
 			run_cmd += ' lambda ' + str(lambda_param)
+			run_cmd += ' window ' + str(window_param)
 			run_cmd += ' interval ' + str(interval_param)
-			run_cmd += ' multiple 1'
 			run_cmd += ' sketch_file ' + train_sketch_file_name
 			run_cmd += ' chunkify 1 '
 			run_cmd += ' chunk_size ' + str(chunk_size_param)
@@ -187,8 +194,8 @@ class Unicorn(MeasurementInterface):
 			run_cmd += ' stream_file ' + test_stream_file_name
 			run_cmd += ' decay 500'
 			run_cmd += ' lambda ' + str(lambda_param)
+			run_cmd += ' window ' + str(window_param)
 			run_cmd += ' interval ' + str(interval_param)
-			run_cmd += ' multiple 1'
 			run_cmd += ' sketch_file ' + test_sketch_file_name
 			run_cmd += ' chunkify 1 '
 			run_cmd += ' chunk_size ' + str(chunk_size_param)
