@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
 	num_stds = args['num_stds']
 	if num_stds is None:	# If this argument is not supplied by the user, we try all possible configurations.
-		num_stds_config = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0]
+		num_stds_config = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0]
 	else:
 		num_stds_config = [num_stds]
 
@@ -206,7 +206,7 @@ if __name__ == "__main__":
 			models.append(all_models[index])
 
 		print "We will attempt multiple cluster threshold configurations for the best results."
-		print "Trying: mean/max distances with 1.0, 1,1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0 standard deviation(s)..."
+		print "Trying: mean/max distances with 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0 standard deviation(s)..."
 		print "Best Configuration: "
 	        best_accuracy = 0.0
 	        final_printout = ""
