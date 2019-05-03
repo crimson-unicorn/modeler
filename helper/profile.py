@@ -223,7 +223,7 @@ def test_single_graph(arr, models, metric, num_stds):
 		check_next_model = False	# Flag signalling whether we should proceed to check with the next model because the current one does not fit.
 		if not model.get_evolution():	# If the evolution is empty
 			check_next_model = True
-			break
+			continue
 		current_evolution_idx = 0 
 		current_cluster_idx = model.get_evolution()[current_evolution_idx]
 		current_medoid = model.get_medoids()[current_cluster_idx]	# Get the medoid of the current cluster.
