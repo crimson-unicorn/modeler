@@ -25,6 +25,7 @@ def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, nu
 	models = []
 	for model_num, input_train_file in enumerate(train_files):
 		with open(os.path.join(train_dir_name, input_train_file), 'r') as f:
+                        print("Modeling {}".format(input_train_file))
 			sketches = load_sketch(f)
 			# @dists now contains pairwise Hamming distance (using @pdist) between any two sketches in @sketches.
 			dists = pairwise_distance(sketches)
@@ -37,7 +38,7 @@ def model_all_training_graphs(train_files, train_dir_name, max_cluster_num=6, nu
 			model = Model()
 			model.construct_model(sketches, dists, best_cluster_group)
 						
-			print "Model " + str(model_num) + " is done!"
+			# print "Model " + str(model_num) + " is done!"
 			# model.print_mean_thresholds()
 			# model.print_evolution()
 			
@@ -129,16 +130,17 @@ if __name__ == "__main__":
 
 	num_stds = args['num_stds']
 	if num_stds is None:	# If this argument is not supplied by the user, we try all possible configurations.
-		num_stds_config = [1.0, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+		# num_stds_config = [1.0, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+                num_stds_config = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0]
 	else:
 		num_stds_config = [num_stds]
 
 	# Modeling (training)
 	models = model_all_training_graphs(train_files, train_dir_name)
 
-	print "We will attempt multiple cluster threshold configurations for the best results."
-	print "Trying: mean/max distances with 1.0, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0 standard deviation(s)..."
-	print "Best Configuration: "
+	# print "We will attempt multiple cluster threshold configurations for the best results."
+	# print "Trying: mean/max distances with 1.0, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0 standard deviation(s)..."
+	# print "Best Configuration: "
         best_accuracy = 0.0
         final_printout = ""
         final_precision = None
@@ -146,42 +148,61 @@ if __name__ == "__main__":
         final_f = None
         best_metric = None
         best_std = 0.0
-	for tm in threshold_metric_config:
-		for ns in num_stds_config:
+        for input_test_file in test_files:
+                with open(os.path.join(test_dir_name, input_test_file), 'r') as f:
+                        print(input_test_file)
+                        sketches = load_sketch(f)
+                        for tm in threshold_metric_config:
+                                for ns in num_stds_config:
+                                        abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, tm, ns)
+                                        if abnormal:
+                                            print("Config ({} w/ STD {}) ===> graph is considered abnormal at sketch {}".format(tm, ns, max_abnormal_point))
+                                        else:
+                                            print("Config ({} w/ STD {}) ===> graph is considered benign fitting {} models".format(tm, ns, num_fitted_model))
+                                        test_cluster(sketches, models, tm, ns)
+	# for tm in threshold_metric_config:
+		# for ns in num_stds_config:
 			# Validation/Testing
-			test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(test_files, test_dir_name, models, tm, ns)
-			if test_accuracy > best_accuracy:
-				best_accuracy = test_accuracy
-				final_precision = test_precision
-				final_recall = test_recall
-				final_f = test_f_measure
-				final_printout = printout
-				best_metric = tm
-				best_std = ns
-			elif test_accuracy == best_accuracy:
-				if best_metric == 'max' and tm == 'mean':	# same accuracy, prefer mean than max
-					best_metric = tm
-					best_std = ns
-					final_precision = test_precision
-					final_recall = test_recall
-					final_f = test_f_measure
-					final_printout = printout
-				elif best_metric == tm:				# same accuracy and same metric, prefer lower number of std
-					if ns < best_std:
-						best_std = ns
-						final_precision = test_precision
-						final_recall = test_recall
-						final_f = test_f_measure
-						final_printout = printout
-
-	print "Threshold metric: " + best_metric
-	print "Number of standard deviations: " + str(best_std)
-	print "Test accuracy: " + str(best_accuracy)
-	print "Test Precision: " + str(final_precision)
-	print "Test Recall: " + str(final_recall)
-	print "Test F-1 Score: " + str(final_f)
-	print "Results: "
-	print final_printout
+			# test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(test_files, test_dir_name, models, tm, ns)
+			#if test_accuracy > best_accuracy:
+			#	best_accuracy = test_accuracy
+			#	final_precision = test_precision
+			#	final_recall = test_recall
+			#	final_f = test_f_measure
+			#	final_printout = printout
+			#	best_metric = tm
+			#	best_std = ns
+			#elif test_accuracy == best_accuracy:
+			#	if best_metric == 'max' and tm == 'mean':	# same accuracy, prefer mean than max
+			#		best_metric = tm
+			#		best_std = ns
+			#		final_precision = test_precision
+			#		final_recall = test_recall
+			#		final_f = test_f_measure
+			#		final_printout = printout
+			#	elif best_metric == tm:				# same accuracy and same metric, prefer lower number of std
+			#		if ns < best_std:
+			#			best_std = ns
+			#			final_precision = test_precision
+			#			final_recall = test_recall
+			#			final_f = test_f_measure
+			#			final_printout = printout
+                        # print "Threshold metric: " + tm
+                        # print "Number of standard deviations: " + str(ns)
+                        # print "Test accuracy: " + str(test_accuracy)
+                        # print "Test Precision: " + str(test_precision)
+                        # print "Test Recall: " + str(test_recall)
+                        # print "Test F-1 Score: " + str(test_f_measure)
+                        # print "Results: "
+                         #print printout
+	#print "Threshold metric: " + best_metric
+	#print "Number of standard deviations: " + str(best_std)
+	#print "Test accuracy: " + str(best_accuracy)
+	#print "Test Precision: " + str(final_precision)
+	#print "Test Recall: " + str(final_recall)
+	#print "Test F-1 Score: " + str(final_f)
+	#print "Results: "
+	#print final_printout
 
 
 

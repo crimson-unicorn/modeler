@@ -12,6 +12,7 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform, hamming
 from sklearn.metrics import silhouette_score, silhouette_samples
 from medoids import _k_medoids_spawn_once
+from collections import OrderedDict
 
 class BestClusterGroup():
 	"""
@@ -170,6 +171,10 @@ class Model():
 						prev = current
 						self.evolution.append(current)
 
+                for cluster_idx in range(best_num_clusters):
+                        print("{}->{}".format(cluster_idx, self.members[cluster_idx]))
+
+
 def load_sketch(file_handle):
 	"""
 	Load sketches in a file (from @file_handle) to memory as numpy arrays.
@@ -191,6 +196,23 @@ def pairwise_distance(arr, method='hamming'):
 	@squareform function makes it a matrix for easy indexing and accessing.
 	"""
 	return squareform(pdist(arr, metric=method))
+
+def test_cluster(arr, models, metric, num_stds):
+        for model_id, model in enumerate(models):
+                arr_cluster = OrderedDict()
+                for cluster in model.get_evolution():
+                        medoid = model.get_medoids()[cluster]
+                        if metric == 'mean':
+                                threshold = model.get_mean_thresholds()[cluster] + num_stds * model.get_stds()[cluster]
+                        elif metric == 'max':
+                                threshold = model.get_max_thresholds()[cluster] + num_stds * model.get_stds()[cluster]
+                        for arr_id, sketch in enumerate(arr):
+                                if not arr_id in arr_cluster:
+                                        arr_cluster[arr_id] = OrderedDict()
+                                distance_from_medoid = hamming(sketch, medoid)
+                                arr_cluster[arr_id][cluster] = distance_from_medoid - threshold
+                #print(arr_cluster)
+
 
 def test_single_graph(arr, models, metric, num_stds):
 	"""
