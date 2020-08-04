@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #########################################
-# Code is obtained from:
+# Reference:
 # https://github.com/alexprengere/medoids
 #########################################
 

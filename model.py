@@ -1,270 +1,233 @@
 #!/usr/bin/env python
 
 ##########################################################################################
-# Partial credit to:
-# Emaad Manzoor
 # Some of the code is adapted from:
 # https://github.com/sbustreamspot/sbustreamspot-train/blob/master/create_seed_clusters.py
 ##########################################################################################
-
 import argparse
 import numpy as np
 import random
-import os, sys
-from helper.medoids import _k_medoids_spawn_once
-from helper.profile import *
+import os
+import sys
+from helper.profile import BestClusterGroup, Model, test_single_graph
 from scipy.spatial.distance import pdist, squareform, hamming
-from sklearn.metrics import silhouette_score, silhouette_samples
 from sklearn.model_selection import KFold, ShuffleSplit
-from copy import deepcopy
 
-def save_model(model, model_num, fh):
-	"""Save a model with model number @model_num to a file with handle @fh.
-	"""
-	fh.write("MODEL " + str(model_num) + "\n")
 
-	num_cluster = len(model.medoids)
-	fh.write(str(num_cluster) + "\n")
+def save_model(model, model_name, fh):
+    """Save a model with model name as the training file name. 
+    Models are saved to a file @fh. """
+    fh.write("model: {}\n".format(model_name))
+    num_cluster = len(model.medoids)
+    fh.write("cluster: {}\n".format(num_cluster))
+    for medoid in model.medoids:
+        fh.write("medoid: ")
+        for elem in medoid:
+            fh.write("{} ".format(int(float(elem))))
+        fh.write("\n")
+    fh.write("mean: ")
+    for mean in model.mean_thresholds:
+        fh.write("{} ".format(float(mean)))
+    fh.write("\n")
+    fh.write("max: ")
+    for max in model.max_thresholds:
+        fh.write("{} ".format(float(max)))
+    fh.write("\n")
+    fh.write("std: ")
+    for std in model.stds:
+        fh.write("{} ".format(float(std)))
+    fh.write("\n")
+    fh.write("evolution: ")
+    for evol in model.evolution:
+        fh.write("{} ".format(evol))
+    fh.write("\n")
 
-	for medoid in model.medoids:
-		for elem in medoid:
-			fh.write(str(int(float(elem))) + " ")
-		fh.write("\n")
 
-	for met in model.mean_thresholds:
-		fh.write(str(float(met)) + " ")
-	fh.write("\n")
+def load_sketches(fh):
+    """Load sketches in a file from the handle @fh to memory as numpy arrays. """
+    sketches = list()
+    for line in fh:
+        sketch = map(long, line.strip().split())
+        sketches.append(sketch)
+    return np.array(sketches)
 
-	for mat in model.max_thresholds:
-		fh.write(str(float(mat)) + " ")
-	fh.write("\n")
 
-	for std in model.stds:
-		fh.write(str(float(std)) + " ")
-	fh.write("\n")
+def pairwise_distance(arr, method='hamming'):
+    """Wrapper function that calculates the pairwise distance between every
+    two elements within the @arr. The metric (@method) is default as hamming.
+    squareform function makes it a matrix for easy indexing and accessing. """
+    return squareform(pdist(arr, metric=method))
 
-	for e in model.evolution:
-		fh.write(str(e) + " ")
-	fh.write("\n")
 
-def load_sketches(file_names, dir_name, size_check):
-	included_sketches = []
-	included_targets = []
-	for num, input_file in enumerate(file_names):
-		with open(os.path.join(dir_name, input_file), 'r') as f:
-			sketches = load_sketch(f, size_check)
-			if sketches.size == 0:
-				f.close()
-				continue
-			else:
-				included_sketches.append(sketches)
-				included_targets.append(file_names[num])
-				f.close()
-	return np.asarray(included_sketches), np.asarray(included_targets)
+def model_graphs(train_files, model_file, max_cluster_num=6, num_trials=20, max_iterations=1000):
+    """Read sketch vectors in @train_files to build submodels. Create one model from each file.
+    Returns a dictionary that maps the train file name to its model. """
+    # A dictionary of models from each file in @train_files.
+    models = dict()
+    if model_file:
+        savefile = open(model_file, 'a+')
+    else:
+        print("\33[5;30;42m[INFO]\033[0m Model is not saved, use --save-model to save the model")
+    for train_file in train_files:
+        with open(train_file, 'r') as f:
+            sketches = load_sketches(f)
+            # @dists contains pairwise Hamming distance between two sketches in @sketches.
+            try:
+                dists = pairwise_distance(sketches)
+            except Exception as e:
+                print("\33[101m[ERROR]\033[0m Exception occurred in modeling from file {}: {}".format(train_file, e))
+                raise RuntimeError("Model builing failed: {}".format(e))
+            # Define a @distance function to use to optimize.
+            def distance(x, y):
+                return dists[x][y]
+            best_cluster_group = BestClusterGroup()
+            best_cluster_group.optimize(arrs=sketches, distance=distance, max_cluster_num=max_cluster_num, num_trials=num_trials, max_iterations=max_iterations)
+            # With the best medoids, we can compute some statistics for the model.
+            model = Model()
+            model.construct(sketches, dists, best_cluster_group)
+            print("\x1b[6;30;42m[SUCCESS]\x1b[0m Model from {} is done...".format(train_file))
+            # model.print_mean_thresholds()
+            # model.print_evolution()
 
-def model_all_training_graphs(train_sketches, train_names, size_check, max_cluster_num=6, num_trials=20, max_iterations=1000):
-	# Now we will open every file and read the sketch vectors in the file for modeling.
-	# We will create a model for each file and then merge the models if necessary (#TODO).
-	
-	# @models contains a list of models from each file.
-	models = []
-	# @savefile saves all the models
-	savefile = open('models.txt', 'a+')
-	for model_num, sketches in enumerate(train_sketches):
-		# @dists now contains pairwise Hamming distance (using @pdist) between any two sketches in @sketches.
-		try:
-			dists = pairwise_distance(sketches)
-		except Exception as e:
-			print "Exception in model file " + str(train_names[model_num]) + ": " + str(e)
-			raise RuntimeError("Model cannot be built properly: " + str(e))
-		# We define a @distance function to use in @optimize.
-		def distance(x, y):
-			return dists[x][y]
-		best_cluster_group = BestClusterGroup()
-		best_cluster_group.optimize(arr=sketches, distance=distance, max_cluster_num=max_cluster_num, num_trials=num_trials, max_iterations=max_iterations)
-		# Now that we have determined the best medoids, we calculate some statistics for modeling.
-		model = Model()
-		model.construct_model(sketches, dists, best_cluster_group)
-					
-		print "Model " + str(model_num) + " is done!"
-		# model.print_mean_thresholds()
-		# model.print_evolution()
+	    # Save model
+            if model_file:
+                print("\x1b[6;30;42m[STATUS]\x1b[0m Saving the model {} to {}...".format(train_file, model_file))
+	        save_model(model, train_file, savefile)
 
-		# saving model to the file
-		print "Saving model " + str(train_names[model_num]) + "..."
-		save_model(model, model_num, savefile)
+            models[train_file] = model
+        # Close the file and proceed to the next model.
+        f.close()
+    if model_file:
+        savefile.close()
+    return models
 
-		models.append(model)
-	savefile.close()
-	return models
 
-# TODO: We can merge similar models in @models here.
+def test_graphs(test_files, models, metric, num_stds):
+    """Test all sketch vectors in @test_files using the @models
+    built from model_training_graphs. """
+    total_graphs_tested = 0.0
+    tp = 0.0 # true positive (intrusion and alarmed)
+    tn = 0.0 # true negative (not intrusion and not alarmed)
+    fp = 0.0 # false positive (not intrusion but alarmed)
+    fn = 0.0 # false negative (intrusion but not alarmed)
+    
+    printout = ""
+    for test_file in test_files:
+        with open(test_file, 'r') as f:
+            sketches = load_sketches(f)
+            abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds)
+        f.close()
+        total_graphs_tested += 1
+        if not abnormal: # The graph is considered normal
+            printout += "{} is NORMAL fitting {}/{} models\n".format(test_file, num_fitted_model, len(models))
+            if "attack" not in test_file: # NOTE: file name should include "attack" to indicate the oracle
+                tn = tn + 1
+            else:
+                fn = fn + 1
+        else:
+            printout += "{} is ABNORMAL at {}\n".format(test_file, max_abnormal_point)
+            if "attack" in test_file:
+                tp = tp + 1
+            else:
+                fp = fp + 1
+                
+    if (tp + fp) == 0:
+        precision = None
+    else:
+        precision = tp / (tp + fp)
+    if (tp + fn) == 0:
+        recall = None
+    else:
+        recall = tp / (tp + fn)
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    if not precision or not recall or (precision + recall) == 0:
+        f_measure = None
+    else:
+        f_measure = 2 * (precision * recall) / (precision + recall)
+    return precision, recall, accuracy, f_measure, printout
 
-def test_all_testing_graphs(test_sketches, test_targets, size_check, models, metric, num_stds):
-	# Validation/Testing code starts here.
-	total_graphs = 0.0
-	tp = 0.0	# true positive (intrusion and alarmed)
-	tn = 0.0	# true negative (not intrusion and not alarmed)
-	fp = 0.0	# false positive (not intrusion but alarmed)
-	fn = 0.0	# false negative (intrusion but not alarmed)
-
-	printout = ""
-	for num, sketches in enumerate(test_sketches):
-		if sketches.size == 0:
-			continue
-		else:
-			abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds)
-		total_graphs = total_graphs + 1
-		if not abnormal:	# We have decided that the graph is not abnormal
-			printout += "This graph: " + test_targets[num] + " is considered NORMAL (" + str(num_fitted_model) + "/" + str(len(models)) + ").\n"
-			if "attack" not in test_targets[num]:
-				tn = tn + 1
-			else:
-				fn = fn + 1
-		else:
-			printout += "This graph: " + test_targets[num] + " is considered ABNORMAL at " + str(max_abnormal_point) + "\n"
-			if "attack" in test_targets[num]:
-				tp = tp + 1
-			else:
-				fp = fp + 1
-	if (tp + fp) == 0:
-		precision = None
-	else:
-		precision = tp / (tp + fp)
-	if (tp + fn) == 0:
-		print "[ERROR] This should not have happened. Check your dataset."
-		sys.exit(1)
-	recall = tp / (tp + fn)
-	accuracy = (tp + tn) / (tp + tn + fp + fn)
-	if precision == None or (precision + recall) == 0:
-		f_measure = None
-	else:
-		f_measure = 2 * (precision * recall) / (precision + recall)
-	return precision, recall, accuracy, f_measure, printout
 
 if __name__ == "__main__":
+    # Marcos that are fixed every time.
+    SEED = 42
+    random.seed(SEED)
+    np.random.seed(SEED)
 
-	# Marcos that are fixed every time.
-	SEED = 42
-	random.seed(SEED)
-	np.random.seed(SEED)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--train-dir', help='absolute path to the directory that contains all training sketches', required=True)
+    parser.add_argument('-u', '--test-dir', help='absolute path to the directory that contains all test sketches', required=True)
+    parser.add_argument('-m', '--metric', choices=['mean', 'max', 'both'], default='both',
+            help='threshold metric to use to calculate the mean or max of the cluster distances between cluster members and the medoid')
+    parser.add_argument('-n', '--num-stds', choices=np.arange(0, 5.0, 0.1), type=float,
+            help='the number of standard deviations above the threshold to tolerate')
+    parser.add_argument('-s', '--save-model', help='use this flag to save the model', action='store_true')
+    parser.add_argument('-p', '--model-path', help='file path to save the model', default='model.txt')
+    parser.add_argument('-v', '--cross-validation', help='Number of cross validation we perform (use 0 to turn off cross validation)', type=int, default=5)
+    args = parser.parse_args()
+    # The training file names within @train_dir directory.
+    # We will read every file within the directory, but
+    # we do not do error-checking. You must make sure every
+    # file in train_dir diretory is valid graph sketches.
+    train = os.listdir(args.train_dir)
+    # We make the file name full path
+    train_files = [os.path.join(args.train_dir, f) for f in train]
+    # The test file names within test_dir directory.
+    # Again, we perform no error-checking here.
+    test = os.listdir(args.test_dir)
+    test_files = [os.path.join(args.test_dir, f) for f in test]
+    # Determine metric to use
+    if args.metric is 'both':
+        metric_config = ['mean', 'max']
+    else:
+        metric_config = [args.metric]
+    # Determine the number of standard deviations to use
+    if not args.num_stds:    # If this argument is not given, we explore different possible configurations.
+        std_config = np.arange(0, 5.0, 0.1)
+    else:
+        std_config = [args.num_stds]
+    # Train (all training graphs) #
+    model_save_path = None
+    if args.save_model:
+        model_save_path = args.model_path
+    models = model_graphs(train_files, model_save_path)
+    
+    # Perform K-fold cross validation, unless turned off
+    if args.cross_validation == 0:
+        print("\33[5;30;42m[INFO]\033[0m No cross validation specified, use --cross-validation")
+        # Model (all training_files)
+        submodels = list()
+        for _, model in models.items():
+            submodels.append(model)
+        for tm in metric_config:
+            for ns in std_config:
+                precision, recall, accuracy, f_measure, printout = test_graphs(test_files, submodels, tm, ns)
+                print("Metric: {}\tSTD: {}".format(tm, ns))
+                print("Accuracy: {}\tPrecision: {}\tRecall: {}\tF-1: {}".format(accuracy, precision, recall, f_measure))
+                print("{}".format(printout))
+    else:
+        kf = ShuffleSplit(n_splits=args.cross_validation, test_size=0.2, random_state=0)
+        print("\x1b[6;30;42m[STATUS]\x1b[0m Performing {} cross validation".format(args.cross_validation))
+        cv = 0  # counter of number of cross validation tests
+        for train_idx, validate_idx in kf.split(train_files):
+            training_files = list()                     # Training submodels we use
+            for tidx in train_idx:
+                training_files.append(train_files[tidx])
+            for vidx in validate_idx:                   # Train graphs used as validation
+                test_files.append(train_files[vidx])    # Validation graphs are used as test graphs
 
-	# Parse arguments from the user who must provide the following information:
-	# '--train_dir <directory_path>': the path to the directory that contains data files of all training graphs.
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--train_dir', help='Absolute path to the directory that contains all training vectors', required=True)
-	# '--validate_dir <directory_path>': the path to the directory that contains data files of all validation graphs.
-	# parser.add_argument('--validate_dir', help='Absolute path to the directory that contains all validation vectors', required=True)
-	# '--test_dir <directory_path>': the path to the directory that contains data files of all testing graphs.
-	parser.add_argument('--test_dir', help='Absolute path to the directory that contains all testing vectors', required=True)
-	parser.add_argument('--size', help='The expected size of a single sketch', type=int, default=2000, required=False)
-	# '--threshold_metric <mean/max>': whether the threshold uses mean or max of the cluster distances between cluster members and the medoid.
-	parser.add_argument('--threshold_metric', help='options: mean/max', required=False)
-	# '--num_stds <number>': the number of standard deviations a threshold should tolerate.
-	parser.add_argument('--num_stds', help='Input a number of standard deviations the threshold should tolerate when testing', type=float, required=False)
-	args = vars(parser.parse_args())
+            # Model (only graphs in training_files)
+            submodels = list()
+            for tf in training_files:
+                submodels.append(models[tf])
 
-	train_dir_name = args['train_dir']	# The directory absolute path name from the user input of training vectors.
-	train_files = sortfilenames(os.listdir(train_dir_name))	# The training file names within that directory.
-	train_sketches, train_targets = load_sketches(train_files, train_dir_name, args['size'])
-	# Note that we will read every file within the directory @train_dir_name.
-	# We do not do error checking here. Therefore, make sure every file in @train_dir_name is valid.
-	# We do the same for validation/testing files.
-	# validate_dir_name = args['validate_dir']	# The directory absolute path name from the user input of validation vectors.
-	# validate_files = os.listdir(validate_dir_name)	# The validation file names within that directory.
-	test_dir_name = args['test_dir']	# The directory absolute path name from the user input of testing vectors.
-	test_files = os.listdir(test_dir_name)	# The testing file names within that directory.
-	test_sketches, test_targets = load_sketches(test_files, test_dir_name, args['size'])
+            print("\x1b[6;30;42m[STATUS] Test {}/{}\x1b[0m:".format(cv, args.cross_validation))
+            for tm in metric_config:
+                for ns in std_config:
+                    precision, recall, accuracy, f_measure, printout = test_graphs(test_files, submodels, tm, ns)
+                    print("Metric: {} STD: {}".format(tm, ns))
+                    print("Accuracy: {}\tPrecision: {}\tRecall: {}\tF-1: {}".format(accuracy, precision, recall, f_measure))
+                    print("{}".format(printout))
+            cv += 1
 
-	threshold_metric = args['threshold_metric']
-	if threshold_metric is None:	# If this argument is not supplied by the user, we try all possible configurations.
-		threshold_metric_config = ['mean', 'max']
-	else:
-		threshold_metric_config = [threshold_metric]
-
-	num_stds = args['num_stds']
-	if num_stds is None:	# If this argument is not supplied by the user, we try all possible configurations.
-		num_stds_config = [1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0]
-	else:
-		num_stds_config = [num_stds]
-
-	# only need to generate models once for all CVs
-	all_models = model_all_training_graphs(train_sketches, train_targets, args['size'])
-
-	num_cross_validation = 5
-	# kf = KFold(n_splits=num_cross_validation)
-	kf = ShuffleSplit(n_splits=num_cross_validation, test_size=0.2, random_state=0)
-	print "We will perform " + str(num_cross_validation) + "-fold cross validation..."
-	for benign_train, benign_validate in kf.split(train_targets):
-		benign_validate_sketches, benign_validate_names = train_sketches[benign_validate], train_targets[benign_validate]
-		kf_test_sketches = np.concatenate((test_sketches, benign_validate_sketches), axis=0)
-		kf_test_targets = np.concatenate((test_targets, benign_validate_names), axis=0)
-
-		# Modeling (training)
-		models = []
-		for index in benign_train:
-			models.append(all_models[index])
-
-		print "We will attempt multiple cluster threshold configurations for the best results."
-		print "Trying: mean/max distances with 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0 standard deviation(s)..."
-		print "Best Configuration: "
-	        best_accuracy = 0.0
-	        final_printout = ""
-	        final_precision = None
-	        final_recall = None
-	        final_f = None
-	        best_metric = None
-	        best_std = 0.0
-		for tm in threshold_metric_config:
-			for ns in num_stds_config:
-				# Validation/Testing
-				test_precision, test_recall, test_accuracy, test_f_measure, printout = test_all_testing_graphs(kf_test_sketches, kf_test_targets, args['size'], models, tm, ns)
-				print "Threshold metric: " + tm
-				print "Number of standard deviations: " + str(ns)
-				print "Test accuracy: " + str(test_accuracy)
-				print "Test Precision: " + str(test_precision)
-				print "Test Recall: " + str(test_recall)
-				print "Test F-1 Score: " + str(test_f_measure)
-				print "Results: "
-				print printout
-		# 		if test_accuracy > best_accuracy:
-		# 			best_accuracy = test_accuracy
-		# 			final_precision = test_precision
-		# 			final_recall = test_recall
-		# 			final_f = test_f_measure
-		# 			final_printout = printout
-		# 			best_metric = tm
-		# 			best_std = ns
-		# 		elif test_accuracy == best_accuracy:
-		# 			if best_metric == 'max' and tm == 'mean':	# same accuracy, prefer mean than max
-		# 				best_metric = tm
-		# 				best_std = ns
-		# 				final_precision = test_precision
-		# 				final_recall = test_recall
-		# 				final_f = test_f_measure
-		# 				final_printout = printout
-		# 			elif best_metric == tm:				# same accuracy and same metric, prefer lower number of std
-		# 				if ns < best_std:
-		# 					best_std = ns
-		# 					final_precision = test_precision
-		# 					final_recall = test_recall
-		# 					final_f = test_f_measure
-		# 					final_printout = printout
-
-		# print "Threshold metric: " + best_metric
-		# print "Number of standard deviations: " + str(best_std)
-		# print "Test accuracy: " + str(best_accuracy)
-		# print "Test Precision: " + str(final_precision)
-		# print "Test Recall: " + str(final_recall)
-		# print "Test F-1 Score: " + str(final_f)
-		# print "Results: "
-		# print final_printout
-
-
-
-
-
-
-
-
+    print("\x1b[6;30;42m[SUCCESS]\x1b[0m Unicorn is finished")
 
