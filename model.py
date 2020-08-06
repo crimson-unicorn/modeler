@@ -125,11 +125,11 @@ def test_graphs(test_files, models, metric, num_stds):
             # each test graph. The per-graph debugging
             # information is stored in a dictionary
             test_info = None
-            if DEBUG_INFO:
+            if isinstance(DEBUG_INFO, dict):
                 test_info = dict()
             sketches = load_sketches(f)
             abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds, test_info)
-            if DEBUG_INFO:
+            if isinstance(DEBUG_INFO, dict):
                 DEBUG_INFO[test_file] = test_info
         f.close()
         total_graphs_tested += 1
@@ -164,7 +164,7 @@ def test_graphs(test_files, models, metric, num_stds):
 
 if __name__ == "__main__":
     # Marcos that are fixed every time.
-    SEED = 42
+    SEED = 98765432
     random.seed(SEED)
     np.random.seed(SEED)
 
@@ -182,6 +182,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.verbose:
+        print("\33[5;30;42m[INFO]\033[0m Debugging information will be collected. You can access it programmatically")
         DEBUG_INFO = dict()
 
     # The training file names within @train_dir directory.
