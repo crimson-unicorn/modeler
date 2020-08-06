@@ -76,13 +76,16 @@ class BestClusterGroup():
 
 class Model():
     """Each training graph constructs a (sub)model. """
-    def __init__(self, medoids=None, members=None, mean_thresholds=None, max_thresholds=None, stds=None, evolution=None):
-        """@medoids:        the actual vector of each cluster medoid (not just its index in @arr)
+    def __init__(self, name, medoids=None, members=None, mean_thresholds=None, max_thresholds=None, stds=None, evolution=None):
+        """
+        @name:              the name of the training graph (which is probably the training file name)
+        @medoids:           the actual vector of each cluster medoid (not just its index in @arr)
         @members:           the index of each member that belongs to the corresponding medoid cluster.
         @mean_thresholds:   the mean distance of each cluster.
         @max_thresholds:    the max distance of each cluster.
         @stds:              the standard deviation of each cluster.
         @evolution:         the ordered sequence of the cluster indices."""
+        self.name = name
         self.medoids = medoids
         self.members = members
         self.mean_thresholds = mean_thresholds
@@ -136,6 +139,9 @@ class Model():
                         prev = current
                         self.evolution.append(current)
 
+    def get_name(self):
+        return self.name
+
     def get_medoids(self):
         return self.medoids
     
@@ -155,11 +161,13 @@ class Model():
         return self.evolution
 
 
-def test_single_graph(arrs, models, metric, num_stds):
+def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
     """Test a single graph (@arrs) against all @models.
     @metric: can either be 'mean' or 'max'.
     The thresholds of the @models will be determined
-    by @metric and @num_stds. """
+    by @metric and @num_stds. @debug_info, if is not
+    None, should be populated as a dictionary to store
+    any useful debugging information. """
     abnormal = True             # Flag signaling whether the test graph is abnormal.
     abnormal_point = []         # @abnormal_point is valid only if eventually @abnormal is True.
                                 # Since we test all models, @abnormal_point might not be empty
@@ -220,6 +228,25 @@ def test_single_graph(arrs, models, metric, num_stds):
             num_fitted_model = num_fitted_model + 1
     if abnormal:
         max_abnormal_point = max(abnormal_point)
+
+    # Additional logic for debugging only
+    if isinstance(debug_info,dict): # debug_info is either None (no debugging) or a dictionary
+        for model in models:
+            sketch_info = dict()
+            # @sketch_info maps for each test sketch,
+            # the distance between itself and all
+            # the clusters in the model
+            for arr_id, sketch in enumerate(arrs):
+                sketch_info[arr_id] = list()
+                for cluster in model.get_evolution():
+                    medoid = model.get_medoids()[cluster]
+                    distance_from_medoid = hamming(sketch, medoid)
+                    if metric == 'mean':
+                        threshold = model.get_mean_thresholds()[cluster] + num_stds * model.get_stds()[cluster]
+                    elif metric == 'max':
+                        threshold = model.get_max_thresholds()[cluster] + num_stds * model.get_stds()[cluster]
+                    sketch_info[arr_id].append((cluster, distance_from_medoid - threshold))
+            debug_info[model.get_name()] = sketch_info
 
     return abnormal, max_abnormal_point, num_fitted_model
 

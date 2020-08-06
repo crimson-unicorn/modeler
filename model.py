@@ -14,6 +14,12 @@ from scipy.spatial.distance import pdist, squareform, hamming
 from sklearn.model_selection import KFold, ShuffleSplit
 
 
+# This global dictionary is populated
+# with useful debugging information if
+# -v is set to be True in the command line
+DEBUG_INFO = None
+
+
 def save_model(model, model_name, fh):
     """Save a model with model name as the training file name. 
     Models are saved to a file @fh. """
@@ -83,7 +89,7 @@ def model_graphs(train_files, model_file, max_cluster_num=6, num_trials=20, max_
             best_cluster_group = BestClusterGroup()
             best_cluster_group.optimize(arrs=sketches, distance=distance, max_cluster_num=max_cluster_num, num_trials=num_trials, max_iterations=max_iterations)
             # With the best medoids, we can compute some statistics for the model.
-            model = Model()
+            model = Model(train_file)
             model.construct(sketches, dists, best_cluster_group)
             print("\x1b[6;30;42m[SUCCESS]\x1b[0m Model from {} is done...".format(train_file))
             # model.print_mean_thresholds()
@@ -114,8 +120,17 @@ def test_graphs(test_files, models, metric, num_stds):
     printout = ""
     for test_file in test_files:
         with open(test_file, 'r') as f:
+            # if DEBUG_INFO exists, then we will
+            # track debugging information for
+            # each test graph. The per-graph debugging
+            # information is stored in a dictionary
+            test_info = None
+            if DEBUG_INFO:
+                test_info = dict()
             sketches = load_sketches(f)
-            abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds)
+            abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds, test_info)
+            if DEBUG_INFO:
+                DEBUG_INFO[test_file] = test_info
         f.close()
         total_graphs_tested += 1
         if not abnormal: # The graph is considered normal
@@ -162,8 +177,13 @@ if __name__ == "__main__":
             help='the number of standard deviations above the threshold to tolerate')
     parser.add_argument('-s', '--save-model', help='use this flag to save the model', action='store_true')
     parser.add_argument('-p', '--model-path', help='file path to save the model', default='model.txt')
-    parser.add_argument('-v', '--cross-validation', help='Number of cross validation we perform (use 0 to turn off cross validation)', type=int, default=5)
+    parser.add_argument('-c', '--cross-validation', help='number of cross validation we perform (use 0 to turn off cross validation)', type=int, default=5)
+    parser.add_argument('-v', '--verbose', help='produce debugging information', action='store_true')
     args = parser.parse_args()
+
+    if args.verbose:
+        DEBUG_INFO = dict()
+
     # The training file names within @train_dir directory.
     # We will read every file within the directory, but
     # we do not do error-checking. You must make sure every
