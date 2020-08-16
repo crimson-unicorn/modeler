@@ -93,14 +93,10 @@ def test_all_testing_graphs(test_files, test_dir_name, models, metric, num_stds)
 
 if __name__ == "__main__":
 
-	# Marcos that are fixed every time.
-	SEED = 42
-	random.seed(SEED)
-	np.random.seed(SEED)
-
 	# Parse arguments from the user who must provide the following information:
 	# '--train_dir <directory_path>': the path to the directory that contains data files of all training graphs.
 	parser = argparse.ArgumentParser()
+	parser.add_argument('--seed', help='Random number seed', required=False)
 	parser.add_argument('--train_dir', help='Absolute path to the directory that contains all training vectors', required=True)
 	# '--validate_dir <directory_path>': the path to the directory that contains data files of all validation graphs.
 	# parser.add_argument('--validate_dir', help='Absolute path to the directory that contains all validation vectors', required=True)
@@ -111,6 +107,11 @@ if __name__ == "__main__":
 	# '--num_stds <number>': the number of standard deviations a threshold should tolerate.
 	parser.add_argument('--num_stds', help='Input a number of standard deviations the threshold should tolerate when testing', type=float, required=False)
 	args = vars(parser.parse_args())
+
+	if args['seed'] :
+		SEED = int(args['seed'])
+		random.seed(SEED)
+		np.random.seed(SEED)
 
 	train_dir_name = args['train_dir']	# The directory absolute path name from the user input of training vectors.
 	train_files = os.listdir(train_dir_name)	# The training file names within that directory.

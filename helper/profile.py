@@ -211,7 +211,7 @@ def test_cluster(arr, models, metric, num_stds):
                                         arr_cluster[arr_id] = OrderedDict()
                                 distance_from_medoid = hamming(sketch, medoid)
                                 arr_cluster[arr_id][cluster] = distance_from_medoid - threshold
-                #print(arr_cluster)
+                print(arr_cluster)
 
 
 def test_single_graph(arr, models, metric, num_stds):
