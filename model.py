@@ -92,8 +92,9 @@ def model_graphs(train_files, model_file, max_cluster_num=6, num_trials=20, max_
             model = Model(train_file)
             model.construct(sketches, dists, best_cluster_group)
             print("\x1b[6;30;42m[SUCCESS]\x1b[0m Model from {} is done...".format(train_file))
-            # model.print_mean_thresholds()
-            # model.print_evolution()
+            # Save some model information in DEBUG_INFO if -v is turned on
+            if isinstance(DEBUG_INFO, dict):
+                DEBUG_INFO[train_file] = model.get_members()
 
 	    # Save model
             if model_file:
@@ -163,11 +164,6 @@ def test_graphs(test_files, models, metric, num_stds):
 
 
 if __name__ == "__main__":
-    # Marcos that are fixed every time.
-    SEED = 98765432
-    random.seed(SEED)
-    np.random.seed(SEED)
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--train-dir', help='absolute path to the directory that contains all training sketches', required=True)
     parser.add_argument('-u', '--test-dir', help='absolute path to the directory that contains all test sketches', required=True)
@@ -176,10 +172,16 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--num-stds', choices=np.arange(0, 5.0, 0.1), type=float,
             help='the number of standard deviations above the threshold to tolerate')
     parser.add_argument('-s', '--save-model', help='use this flag to save the model', action='store_true')
+    parser.add_argument('-S', '--seed', help='seed for random number generator', type=int, default=98765432)
     parser.add_argument('-p', '--model-path', help='file path to save the model', default='model.txt')
     parser.add_argument('-c', '--cross-validation', help='number of cross validation we perform (use 0 to turn off cross validation)', type=int, default=5)
     parser.add_argument('-v', '--verbose', help='produce debugging information', action='store_true')
     args = parser.parse_args()
+
+    SEED = args.seed
+    random.seed(SEED)
+    np.random.seed(SEED)
+    print("\33[5;30;42m[INFO]\033[0m Random number seed: {}".format(SEED))
 
     if args.verbose:
         print("\33[5;30;42m[INFO]\033[0m Debugging information will be collected. You can access it programmatically")
@@ -249,6 +251,14 @@ if __name__ == "__main__":
                     print("Accuracy: {}\tPrecision: {}\tRecall: {}\tF-1: {}".format(accuracy, precision, recall, f_measure))
                     print("{}".format(printout))
             cv += 1
+
+    # Debug print for Visicorn
+    if args.verbose:
+        for tf in train_files:
+            print(DEBUG_INFO[tf])
+        for tf in test_files:
+            print(tf)
+            print(DEBUG_INFO[tf])
 
     print("\x1b[6;30;42m[SUCCESS]\x1b[0m Unicorn is finished")
 
