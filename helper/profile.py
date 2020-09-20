@@ -173,7 +173,8 @@ def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
                                 # Since we test all models, @abnormal_point might not be empty
                                 # even for a normal graph.
     max_abnormal_point = None   # The latest stage the graph cannot be fitted
-    num_fitted_model = 0 # The total number of models that can be fitted by the test graph.
+    num_fitted_model = 0            # The total number of models that can be fitted by the test graph.
+    num_fitted_model_name = list()  # The names of the fitted models
     # Fit the sketch arrays in @arrs to each model in @models. 
     # As long as the test graph could fit into one of the models,
     # we will set the @abnormal flag to False. If it could not
@@ -226,6 +227,7 @@ def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
             # many models our test graph could fit, so we
             # will test all the models.
             num_fitted_model = num_fitted_model + 1
+            num_fitted_model_name.append(model.get_name())
     if abnormal:
         max_abnormal_point = max(abnormal_point)
 
@@ -248,5 +250,5 @@ def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
                     sketch_info[arr_id].append((cluster, distance_from_medoid - threshold))
             debug_info[model.get_name()] = sketch_info
 
-    return abnormal, max_abnormal_point, num_fitted_model
+    return abnormal, max_abnormal_point, num_fitted_model, num_fitted_model_name
 

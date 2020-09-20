@@ -129,13 +129,13 @@ def test_graphs(test_files, models, metric, num_stds):
             if isinstance(DEBUG_INFO, dict):
                 test_info = dict()
             sketches = load_sketches(f)
-            abnormal, max_abnormal_point, num_fitted_model = test_single_graph(sketches, models, metric, num_stds, test_info)
+            abnormal, max_abnormal_point, num_fitted_model, num_fitted_model_name = test_single_graph(sketches, models, metric, num_stds, test_info)
             if isinstance(DEBUG_INFO, dict):
                 DEBUG_INFO[test_file] = test_info
         f.close()
         total_graphs_tested += 1
         if not abnormal: # The graph is considered normal
-            printout += "{} is NORMAL fitting {}/{} models\n".format(test_file, num_fitted_model, len(models))
+            printout += "{} is NORMAL fitting {}/{} models ({})\n".format(test_file, num_fitted_model, len(models), num_fitted_model_name)
             if "attack" not in test_file: # NOTE: file name should include "attack" to indicate the oracle
                 tn = tn + 1
             else:
@@ -255,6 +255,7 @@ if __name__ == "__main__":
     # Debug print for Visicorn
     if args.verbose:
         for tf in train_files:
+            print(tf)
             print(DEBUG_INFO[tf])
         for tf in test_files:
             print(tf)
