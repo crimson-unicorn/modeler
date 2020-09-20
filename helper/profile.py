@@ -161,13 +161,15 @@ class Model():
         return self.evolution
 
 
-def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
+def test_single_graph(arrs, models, metric, num_stds, debug_info=None, forgive=0):
     """Test a single graph (@arrs) against all @models.
     @metric: can either be 'mean' or 'max'.
     The thresholds of the @models will be determined
     by @metric and @num_stds. @debug_info, if is not
     None, should be populated as a dictionary to store
-    any useful debugging information. """
+    any useful debugging information. @forgive is the
+    number of first N sketches to be forgiven even if
+    they don't fit into any cluster. """
     abnormal = True             # Flag signaling whether the test graph is abnormal.
     abnormal_point = []         # @abnormal_point is valid only if eventually @abnormal is True.
                                 # Since we test all models, @abnormal_point might not be empty
@@ -198,6 +200,8 @@ def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
             current_threshold = model.get_max_thresholds()[current_cluster_idx] + num_stds * model.get_stds()[current_cluster_idx]
         
         for arr_id, sketch in enumerate(arrs):
+            if arr_id < forgive:
+                continue
             distance_from_medoid = hamming(sketch, current_medoid) # Compute the hamming distance between the current medoid and the current test sketch.
             if distance_from_medoid > current_threshold:
                 # Check maybe the evolution has evolved to the next cluster if it exsits.

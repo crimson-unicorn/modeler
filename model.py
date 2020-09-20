@@ -109,7 +109,7 @@ def model_graphs(train_files, model_file, max_cluster_num=6, num_trials=20, max_
     return models
 
 
-def test_graphs(test_files, models, metric, num_stds):
+def test_graphs(test_files, models, metric, num_stds, forgive):
     """Test all sketch vectors in @test_files using the @models
     built from model_training_graphs. """
     total_graphs_tested = 0.0
@@ -129,7 +129,7 @@ def test_graphs(test_files, models, metric, num_stds):
             if isinstance(DEBUG_INFO, dict):
                 test_info = dict()
             sketches = load_sketches(f)
-            abnormal, max_abnormal_point, num_fitted_model, num_fitted_model_name = test_single_graph(sketches, models, metric, num_stds, test_info)
+            abnormal, max_abnormal_point, num_fitted_model, num_fitted_model_name = test_single_graph(sketches, models, metric, num_stds, test_info, forgive)
             if isinstance(DEBUG_INFO, dict):
                 DEBUG_INFO[test_file] = test_info
         f.close()
@@ -175,6 +175,7 @@ if __name__ == "__main__":
     parser.add_argument('-S', '--seed', help='seed for random number generator', type=int, default=98765432)
     parser.add_argument('-p', '--model-path', help='file path to save the model', default='model.txt')
     parser.add_argument('-c', '--cross-validation', help='number of cross validation we perform (use 0 to turn off cross validation)', type=int, default=5)
+    parser.add_argument('-f', '--forgive', help='the first N sketches are forgiven if they cannot be clustered in a model', type=int, default=0)
     parser.add_argument('-v', '--verbose', help='produce debugging information', action='store_true')
     args = parser.parse_args()
 
@@ -223,7 +224,7 @@ if __name__ == "__main__":
             submodels.append(model)
         for tm in metric_config:
             for ns in std_config:
-                precision, recall, accuracy, f_measure, printout = test_graphs(test_files, submodels, tm, ns)
+                precision, recall, accuracy, f_measure, printout = test_graphs(test_files, submodels, tm, ns, args.forgive)
                 print("Metric: {}\tSTD: {}".format(tm, ns))
                 print("Accuracy: {}\tPrecision: {}\tRecall: {}\tF-1: {}".format(accuracy, precision, recall, f_measure))
                 print("{}".format(printout))
@@ -246,7 +247,7 @@ if __name__ == "__main__":
             print("\x1b[6;30;42m[STATUS] Test {}/{}\x1b[0m:".format(cv, args.cross_validation))
             for tm in metric_config:
                 for ns in std_config:
-                    precision, recall, accuracy, f_measure, printout = test_graphs(test_files, submodels, tm, ns)
+                    precision, recall, accuracy, f_measure, printout = test_graphs(test_files, submodels, tm, ns, args.forgive)
                     print("Metric: {} STD: {}".format(tm, ns))
                     print("Accuracy: {}\tPrecision: {}\tRecall: {}\tF-1: {}".format(accuracy, precision, recall, f_measure))
                     print("{}".format(printout))
