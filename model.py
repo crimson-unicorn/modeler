@@ -49,10 +49,15 @@ def save_model(model, model_name, fh):
     fh.write("\n")
 
 
-def load_sketches(fh):
-    """Load sketches in a file from the handle @fh to memory as numpy arrays. """
+def load_sketches(fh, forgive):
+    """Load sketches in a file from the handle @fh to memory as numpy arrays.
+    @forgive is the first N number of sketches being omitted. """
     sketches = list()
+    skip = 0
     for line in fh:
+        if skip < forgive:
+            skip += 1
+            continue
         sketch = map(long, line.strip().split())
         sketches.append(sketch)
     return np.array(sketches)
@@ -65,9 +70,10 @@ def pairwise_distance(arr, method='hamming'):
     return squareform(pdist(arr, metric=method))
 
 
-def model_graphs(train_files, model_file, max_cluster_num=6, num_trials=20, max_iterations=1000):
+def model_graphs(train_files, model_file, forgive, max_cluster_num=6, num_trials=20, max_iterations=1000):
     """Read sketch vectors in @train_files to build submodels. Create one model from each file.
-    Returns a dictionary that maps the train file name to its model. """
+    Returns a dictionary that maps the train file name to its model. @forgive is the number of
+    first N sketches to ignore from modeling. """
     # A dictionary of models from each file in @train_files.
     models = dict()
     if model_file:
@@ -76,7 +82,7 @@ def model_graphs(train_files, model_file, max_cluster_num=6, num_trials=20, max_
         print("\33[5;30;42m[INFO]\033[0m Model is not saved, use --save-model to save the model")
     for train_file in train_files:
         with open(train_file, 'r') as f:
-            sketches = load_sketches(f)
+            sketches = load_sketches(f, forgive)
             # @dists contains pairwise Hamming distance between two sketches in @sketches.
             try:
                 dists = pairwise_distance(sketches)
@@ -128,8 +134,8 @@ def test_graphs(test_files, models, metric, num_stds, forgive):
             test_info = None
             if isinstance(DEBUG_INFO, dict):
                 test_info = dict()
-            sketches = load_sketches(f)
-            abnormal, max_abnormal_point, num_fitted_model, num_fitted_model_name = test_single_graph(sketches, models, metric, num_stds, test_info, forgive)
+            sketches = load_sketches(f, forgive)
+            abnormal, max_abnormal_point, num_fitted_model, num_fitted_model_name = test_single_graph(sketches, models, metric, num_stds, test_info)
             if isinstance(DEBUG_INFO, dict):
                 DEBUG_INFO[test_file] = test_info
         f.close()
@@ -213,7 +219,8 @@ if __name__ == "__main__":
     model_save_path = None
     if args.save_model:
         model_save_path = args.model_path
-    models = model_graphs(train_files, model_save_path)
+    print("\33[5;30;42m[INFO]\033[0m First {} sketches are excluded from modeling and testing".format(args.forgive))
+    models = model_graphs(train_files, model_save_path, args.forgive)
     
     # Perform K-fold cross validation, unless turned off
     if args.cross_validation == 0:
