@@ -255,6 +255,7 @@ if __name__ == "__main__":
     # Debug print for Visicorn
     if args.verbose:
         for tf in train_files:
+            print(tf)
             print(DEBUG_INFO[tf])
         for tf in test_files:
             print(tf)
