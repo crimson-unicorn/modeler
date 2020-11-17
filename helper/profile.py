@@ -174,6 +174,11 @@ def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
                                 # even for a normal graph.
     max_abnormal_point = None   # The latest stage the graph cannot be fitted
     num_fitted_model = 0 # The total number of models that can be fitted by the test graph.
+    # Additional logic for debugging only
+    if isinstance(debug_info,dict): # debug_info is either None (no debugging) or a dictionary
+        failed_at = dict()          # failed_at maps the name of the model to the first arr_id
+                                    # that signals that the graph cannot be fitted to the model
+        fitted_models = list()      # fitted_models records all the models that can be fitted
     # Fit the sketch arrays in @arrs to each model in @models. 
     # As long as the test graph could fit into one of the models,
     # we will set the @abnormal flag to False. If it could not
@@ -213,10 +218,16 @@ def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
                         check_next_model = True	                 # We know this graph does not fit into this model,
                                                                  # but it may fit into a different model.
                         abnormal_point.append(arr_id)            # Record at which point the graph stops being normal
+                        # Debugging only
+                        if isinstance(debug_info,dict):
+                            failed_at[model.get_name()] = arr_id
                         break
                 else:                                            # If there is not a next cluster in evolution
                     check_next_model = True                      # We consider it abnormal in this model and check next model.
                     abnormal_point.append(arr_id)
+                    # Debugging only
+                    if isinstance(debug_info,dict):
+                        failed_at[model.get_name()] = arr_id
                     break
         if not check_next_model:
             abnormal = False
@@ -226,6 +237,9 @@ def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
             # many models our test graph could fit, so we
             # will test all the models.
             num_fitted_model = num_fitted_model + 1
+            # Debugging only: record fitted model names
+            if isinstance(debug_info,dict):
+                fitted_models.append(model.get_name())
     if abnormal:
         max_abnormal_point = max(abnormal_point)
 
@@ -247,6 +261,8 @@ def test_single_graph(arrs, models, metric, num_stds, debug_info=None):
                         threshold = model.get_max_thresholds()[cluster] + num_stds * model.get_stds()[cluster]
                     sketch_info[arr_id].append((cluster, distance_from_medoid - threshold))
             debug_info[model.get_name()] = sketch_info
+        debug_info["fitted Models"] = fitted_models
+        debug_info["Failed Arr"] = failed_at
 
     return abnormal, max_abnormal_point, num_fitted_model
 
