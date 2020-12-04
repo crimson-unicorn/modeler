@@ -99,7 +99,7 @@ def model_graphs(train_files, model_file, max_cluster_num=6, num_trials=20, max_
 	    # Save model
             if model_file:
                 print("\x1b[6;30;42m[STATUS]\x1b[0m Saving the model {} to {}...".format(train_file, model_file))
-	        save_model(model, train_file, savefile)
+                save_model(model, train_file, savefile)
 
             models[train_file] = model
         # Close the file and proceed to the next model.
